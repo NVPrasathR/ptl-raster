@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Raster Pick to Light</title>
+    <style>
+      :root {
+        --bg: #08131f;
+        --panel: #101d2a;
+        --panel-alt: #122638;
+        --line: rgba(148, 163, 184, 0.2);
+        --text: #e2e8f0;
+        --muted: #94a3b8;
+        --accent: #22c55e;
+        --warn: #f59e0b;
+        --danger: #ef4444;
+        --info: #38bdf8;
+        --shadow: 0 12px 30px rgba(2, 6, 23, 0.35);
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; min-height: 100%; font-family: "SF Pro Display", "Segoe UI", sans-serif; background: var(--bg); color: var(--text); }
+      body { padding: 16px; }
+      .app { max-width: 1400px; margin: 0 auto; }
+      .topbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 14px; background: linear-gradient(180deg, rgba(13,33,51,0.95), rgba(10,17,28,0.95)); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); }
+      .brand { display: flex; align-items: center; gap: 12px; font-weight: 700; }
+      .logo { width: 14px; height: 14px; border-radius: 50%; background: linear-gradient(135deg, #22c55e, #38bdf8); box-shadow: 0 0 18px rgba(34, 197, 94, 0.8); }
+      .status-pill { display: inline-flex; align-items: center; gap: 8px; border-radius: 999px; padding: 8px 12px; border: 1px solid rgba(34, 197, 94, 0.5); background: rgba(34, 197, 94, 0.12); color: #d1fae5; font-size: 12px; }
+      .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+      .grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px; margin-top: 16px; }
+      .card { background: rgba(16,29,42,0.92); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); }
+      .wide { grid-column: span 8; }
+      .mid { grid-column: span 5; }
+      .small { grid-column: span 4; }
+      .panel-header { padding: 14px 16px 10px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; }
+      .panel-header h3 { margin: 0; font-size: 0.98rem; }
+      .chip { border-radius: 999px; padding: 4px 8px; font-size: 11px; background: rgba(56,189,248,0.12); color: #bae6fd; border: 1px solid rgba(56,189,248,0.35); }
+      .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; padding: 16px; }
+      .stat { padding: 12px 14px; border-radius: 14px; background: rgba(18,38,56,0.8); border: 1px solid var(--line); }
+      .stat-label { color: var(--muted); font-size: 12px; }
+      .stat-value { margin-top: 8px; font-size: 1.6rem; font-weight: 700; }
+      .stat-sub { font-size: 11px; color: var(--muted); margin-top: 6px; }
+      .channels { padding: 12px 14px 14px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+      .channel { background: rgba(18,38,56,0.9); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+      .channel-head { padding: 10px 12px; display: flex; justify-content: space-between; align-items: center; }
+      .channel-name { font-weight: 600; }
+      .toggle { width: 38px; height: 20px; border-radius: 999px; background: rgba(148,163,184,0.25); position: relative; transition: .2s ease; }
+      .toggle::after { content: ""; position: absolute; width: 14px; height: 14px; border-radius: 50%; background: white; top: 3px; left: 4px; transition: .2s ease; }
+      .channel.on .toggle { background: rgba(34,197,94,0.5); }
+      .channel.on .toggle::after { left: 20px; }
+      .channel-body { padding: 0 12px 12px; }
+      .mini-metric { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin: 8px 0; }
+      .bar { height: 7px; border-radius: 999px; background: rgba(148,163,184,0.12); overflow: hidden; }
+      .bar > span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--info), var(--accent)); }
+      .two-col { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 16px; }
+      .panel-body { padding: 16px; }
+      .stack { display: grid; gap: 12px; }
+      .row { display: flex; gap: 12px; justify-content: space-between; align-items: center; }
+      .muted { color: var(--muted); }
+      .field { display: grid; gap: 8px; }
+      .field label { font-size: 12px; color: var(--muted); }
+      input, select, textarea, button { width: 100%; border-radius: 10px; border: 1px solid rgba(148,163,184,0.2); background: rgba(15,23,42,0.8); color: var(--text); padding: 10px 12px; font: inherit; }
+      input:focus, select:focus, textarea:focus { outline: 2px solid rgba(56,189,248,0.3); border-color: rgba(56,189,248,0.5); }
+      textarea { min-height: 155px; resize: vertical; }
+      button { cursor: pointer; transition: transform .15s ease, border .15s ease; font-weight: 600; }
+      button:hover { transform: translateY(-1px); }
+      .primary { background: linear-gradient(135deg, #0ea5e9, #22c55e); border: none; color: white; }
+      .secondary { background: rgba(30,41,59,0.9); }
+      .danger { background: rgba(239,68,68,0.12); border-color: rgba(239,68,68,0.35); color: #fecaca; }
+      .snapshot { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+      .keyval { border: 1px solid var(--line); border-radius: 12px; background: rgba(15,23,42,0.7); padding: 10px 12px; }
+      .keyval .label { color: var(--muted); font-size: 11px; }
+      .keyval .value { margin-top: 6px; font-weight: 600; }
+      .progress { margin-top: 12px; }
+      .progress-bar { height: 10px; border-radius: 999px; background: rgba(148,163,184,0.12); overflow: hidden; }
+      .progress-bar > span { display: block; width: 0%; height: 100%; background: linear-gradient(90deg, #38bdf8, #22c55e); transition: width .2s ease; }
+      .log { margin-top: 12px; background: rgba(2, 6, 23, 0.8); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; color: #dbeafe; min-height: 110px; white-space: pre-wrap; font-size: 12px; line-height: 1.5; }
+      @media (max-width: 960px) {
+        .stats { grid-template-columns: repeat(2, minmax(0,1fr)); }
+        .wide, .mid, .small { grid-column: auto; }
+        .two-col { grid-template-columns: 1fr; }
+      }
+      @media (max-width: 640px) {
+        .channels { grid-template-columns: 1fr; }
+        .stats { grid-template-columns: 1fr; }
+        .topbar { flex-direction: column; align-items: flex-start; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <div class="brand">
+          <span class="logo"></span>
+          <span>Raster Pick to Light</span>
+        </div>
+        <div class="status-pill"><span class="status-dot"></span><span id="deviceOnlineText">System Online</span></div>
+      </header>
+
+      <main class="grid">
+        <section class="card wide">
+          <div class="panel-header"><h3>System Overview</h3><span class="chip" id="deviceModeChip">Normal</span></div>
+          <div class="stats">
+            <div class="stat">
+              <div class="stat-label">Device</div>
+              <div class="stat-value" id="deviceNameValue">Shelf A1</div>
+              <div class="stat-sub" id="deviceAddressValue">10.0.0.42</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Active Channels</div>
+              <div class="stat-value" id="activeChannelsValue">8</div>
+              <div class="stat-sub">of 10</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">LED Health</div>
+              <div class="stat-value" id="ledHealthValue">96%</div>
+              <div class="stat-sub">1380 LEDs</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Team Zones</div>
+              <div class="stat-value" id="teamZoneValue">3</div>
+              <div class="stat-sub">live assignments</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card small">
+          <div class="panel-header"><h3>Device / Team State</h3><span class="chip">Live</span></div>
+          <div class="panel-body snapshot" id="deviceSnapshot"></div>
+        </section>
+
+        <section class="card wide">
+          <div class="panel-header"><h3>Channel / Shelf / LED Status</h3><span class="chip">10 Channels</span></div>
+          <div class="channels" id="channelGrid"></div>
+        </section>
+
+        <section class="card small">
+          <div class="panel-header"><h3>LED + Team Details</h3><span class="chip" id="teamCountChip">3 Teams</span></div>
+          <div class="panel-body stack" id="teamDetails"></div>
+        </section>
+
+        <section class="card mid">
+          <div class="panel-header"><h3>Channel Configuration</h3><span class="chip">Config</span></div>
+          <div class="panel-body stack">
+            <div class="field">
+              <label for="channelSelect">Channel</label>
+              <select id="channelSelect"></select>
+            </div>
+            <div class="field">
+              <label for="ledCount">LED count</label>
+              <input id="ledCount" type="number" min="6" max="200" value="138" />
+            </div>
+            <div class="field">
+              <label for="stripLength">LEDs per strip</label>
+              <input id="stripLength" type="number" min="1" max="12" value="6" />
+            </div>
+            <div class="field">
+              <label for="brightness">Brightness</label>
+              <input id="brightness" type="range" min="10" max="255" value="180" />
+            </div>
+            <div class="row">
+              <button id="applyChannelConfig" class="primary">Apply Channel Config</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="card mid">
+          <div class="panel-header"><h3>Network Configuration</h3><span class="chip">Ethernet</span></div>
+          <div class="panel-body stack">
+            <div class="field">
+              <label for="networkMode">Mode</label>
+              <select id="networkMode">
+                <option value="dhcp">DHCP</option>
+                <option value="static">Static</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="staticIp">Static IP</label>
+              <input id="staticIp" value="10.0.0.42" />
+            </div>
+            <div class="field">
+              <label for="gateway">Gateway</label>
+              <input id="gateway" value="10.0.0.1" />
+            </div>
+            <div class="field">
+              <label for="subnet">Subnet</label>
+              <input id="subnet" value="255.255.255.0" />
+            </div>
+            <div class="row">
+              <button id="applyNetworkConfig" class="primary">Apply Network</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="card wide">
+          <div class="panel-header"><h3>Pharmacy JSON Tester</h3><span class="chip">Command API</span></div>
+          <div class="panel-body stack">
+            <textarea id="jsonPayload">{
+  "device": "Shelf-A1",
+  "channel": 3,
+  "shelf": "A-03",
+  "team": "Team-2",
+  "action": "light",
+  "color": "GREEN",
+  "leds": [6, 7, 8],
+  "blink": false,
+  "brightness": 180
+}</textarea>
+            <div class="row">
+              <button id="sendJson" class="primary">POST Pharmacy Command</button>
+              <button id="loadSampleJson" class="secondary">Load Sample</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="card wide">
+          <div class="panel-header"><h3>Firmware Upload</h3><span class="chip">OTA</span></div>
+          <div class="panel-body stack">
+            <div class="row">
+              <input id="firmwareFile" type="file" accept=".bin,.img,.ota,.gz" />
+              <button id="uploadFirmwareBtn" class="primary">Upload Firmware</button>
+            </div>
+            <div class="field">
+              <label for="otaTarget">Target</label>
+              <input id="otaTarget" value="rp2354" />
+            </div>
+            <div class="row">
+              <label class="muted" for="otaVersion">Version</label>
+              <input id="otaVersion" value="1.4.2" />
+            </div>
+            <div class="progress">
+              <div class="progress-bar"><span id="firmwareProgressBar"></span></div>
+            </div>
+            <div id="firmwareStatus" class="log">Waiting for firmware package.</div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      const state = {
+        device: {
+          name: 'Shelf-A1',
+          online: true,
+          mode: 'normal',
+          ip: '10.0.0.42',
+          ledHealth: 96,
+          activeChannels: 8,
+          totalChannels: 10,
+          totalLeds: 1380,
+          firmwareVersion: '1.4.2',
+          target: 'rp2354'
+        },
+        channels: [
+          { id: 1, name: 'C01', enabled: true, leds: 138, brightness: 180, load: 82, shelf: 'A-01', status: 'Healthy' },
+          { id: 2, name: 'C02', enabled: true, leds: 138, brightness: 180, load: 88, shelf: 'A-02', status: 'Healthy' },
+          { id: 3, name: 'C03', enabled: true, leds: 138, brightness: 180, load: 76, shelf: 'A-03', status: 'Healthy' },
+          { id: 4, name: 'C04', enabled: false, leds: 96, brightness: 140, load: 44, shelf: 'A-04', status: 'Standby' },
+          { id: 5, name: 'C05', enabled: true, leds: 138, brightness: 168, load: 83, shelf: 'B-01', status: 'Healthy' },
+          { id: 6, name: 'C06', enabled: true, leds: 138, brightness: 178, load: 90, shelf: 'B-02', status: 'Healthy' },
+          { id: 7, name: 'C07', enabled: true, leds: 138, brightness: 180, load: 73, shelf: 'B-03', status: 'Healthy' },
+          { id: 8, name: 'C08', enabled: true, leds: 138, brightness: 160, load: 68, shelf: 'B-04', status: 'Healthy' },
+          { id: 9, name: 'C09', enabled: true, leds: 138, brightness: 175, load: 71, shelf: 'C-01', status: 'Healthy' },
+          { id: 10, name: 'C10', enabled: false, leds: 120, brightness: 155, load: 42, shelf: 'C-02', status: 'Standby' }
+        ],
+        teams: [
+          { name: 'Team-1', color: 'RED', shelves: ['A-01', 'B-02'], active: true },
+          { name: 'Team-2', color: 'GREEN', shelves: ['A-03', 'B-03'], active: true },
+          { name: 'Team-3', color: 'BLUE', shelves: ['C-01'], active: false }
+        ]
+      };
+
+      function el(id) { return document.getElementById(id); }
+      function adminToken() {
+        let token = sessionStorage.getItem('rasterAdminToken');
+        if (!token) {
+          token = window.prompt('Enter the provisioned device administrator token:') || '';
+          if (token) sessionStorage.setItem('rasterAdminToken', token);
+        }
+        return token;
+      }
+      function adminHeaders(extra = {}) {
+        const token = adminToken();
+        return { ...extra, ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+      }
+      function escapeHtml(value) {
+        return String(value)
+          .replaceAll('&', '&amp;')
+          .replaceAll('<', '&lt;')
+          .replaceAll('>', '&gt;')
+          .replaceAll('"', '&quot;')
+          .replaceAll("'", '&#39;');
+      }
+
+      function renderDeviceSnapshot() {
+        const container = el('deviceSnapshot');
+        const items = [
+          ['Board', 'RP2354B'],
+          ['Ethernet', state.device.online ? 'W5500 OK' : 'Offline'],
+          ['Firmware', state.device.firmwareVersion],
+          ['Target', state.device.target],
+          ['Mode', state.device.mode],
+          ['LED health', `${state.device.ledHealth}%`],
+        ];
+        container.innerHTML = items.map(([label, value]) => `
+          <div class="keyval">
+            <div class="label">${escapeHtml(label)}</div>
+            <div class="value">${escapeHtml(value)}</div>
+          </div>
+        `).join('');
+      }
+
+      function renderChannelGrid() {
+        const grid = el('channelGrid');
+        grid.innerHTML = state.channels.map((channel) => `
+          <div class="channel ${channel.enabled ? 'on' : ''}" data-id="${channel.id}">
+            <div class="channel-head">
+              <span class="channel-name">${escapeHtml(channel.name)}</span>
+              <span class="toggle" title="${channel.enabled ? 'Enabled' : 'Disabled'}"></span>
+            </div>
+            <div class="channel-body">
+              <div class="mini-metric"><span>LEDs</span><strong>${channel.leds}</strong></div>
+              <div class="mini-metric"><span>Shelf</span><strong>${escapeHtml(channel.shelf)}</strong></div>
+              <div class="mini-metric"><span>Status</span><strong>${escapeHtml(channel.status)}</strong></div>
+              <div class="bar"><span style="width:${Math.min(100, Math.max(0, Number(channel.load) || 0))}%"></span></div>
+            </div>
+          </div>
+        `).join('');
+
+        grid.querySelectorAll('.channel').forEach((node) => {
+          node.addEventListener('click', () => {
+            const id = Number(node.dataset.id);
+            const channel = state.channels.find((item) => item.id === id);
+            if (!channel) return;
+            channel.enabled = !channel.enabled;
+            channel.status = channel.enabled ? 'Healthy' : 'Standby';
+            render();
+          });
+        });
+      }
+
+      function renderTeams() {
+        const container = el('teamDetails');
+        const rows = state.teams.map((team) => `
+          <div class="keyval">
+            <div class="label">${escapeHtml(team.name)}</div>
+            <div class="value">${escapeHtml(team.color)} · ${escapeHtml(team.shelves.join(', '))}</div>
+          </div>
+        `).join('');
+        container.innerHTML = rows || '<div class="muted">No teams configured</div>';
+        el('teamCountChip').textContent = `${state.teams.length} Teams`;
+      }
+
+      function renderConfigSelectors() {
+        const select = el('channelSelect');
+        select.innerHTML = state.channels.map((channel) => `<option value="${Number(channel.id)}">${escapeHtml(channel.name)}</option>`).join('');
+        const first = state.channels[0];
+        if (first) {
+          el('ledCount').value = first.leds;
+          el('brightness').value = first.brightness;
+          el('stripLength').value = 6;
+        }
+      }
+
+      function render() {
+        el('deviceOnlineText').textContent = state.device.online ? 'System Online' : 'Offline';
+        el('deviceModeChip').textContent = state.device.mode.toUpperCase();
+        el('deviceNameValue').textContent = state.device.name;
+        el('deviceAddressValue').textContent = state.device.ip;
+        el('activeChannelsValue').textContent = String(state.channels.filter((x) => x.enabled).length);
+        el('ledHealthValue').textContent = `${state.device.ledHealth}%`;
+        el('teamZoneValue').textContent = String(state.teams.length);
+        renderDeviceSnapshot();
+        renderChannelGrid();
+        renderTeams();
+        renderConfigSelectors();
+      }
+
+      el('applyChannelConfig').addEventListener('click', async () => {
+        const id = Number(el('channelSelect').value);
+        const channel = state.channels.find((item) => item.id === id);
+        if (!channel) return;
+        const update = {
+          channel: `C${String(id).padStart(2, '0')}`,
+          led_count: Number(el('ledCount').value),
+          brightness: Number(el('brightness').value),
+          leds_per_shelf: Number(el('stripLength').value)
+        };
+        const response = await fetch('/api/v1/config', {
+          method: 'PUT',
+          headers: adminHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify(update)
+        });
+        el('firmwareStatus').textContent = await response.text();
+        if (response.ok) {
+          channel.leds = update.led_count;
+          channel.brightness = update.brightness;
+          render();
+        }
+      });
+
+      el('applyNetworkConfig').addEventListener('click', async () => {
+        const update = {
+          dhcp: el('networkMode').value === 'dhcp' ? 'true' : 'false',
+          ip: el('staticIp').value
+        };
+        const response = await fetch('/api/v1/config', {
+          method: 'PUT',
+          headers: adminHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify(update)
+        });
+        el('firmwareStatus').textContent = await response.text();
+      });
+
+      el('loadSampleJson').addEventListener('click', () => {
+        el('jsonPayload').value = `{
+  "channel": "C03",
+  "status": "on",
+  "led_list": [
+    {"led_no": 6, "ledcolor": "GREEN", "team_id": "2"},
+    {"led_no": 7, "ledcolor": "GREEN", "team_id": "2"},
+    {"led_no": 8, "ledcolor": "GREEN", "team_id": "2"}
+  ]
+}`;
+      });
+
+      el('sendJson').addEventListener('click', async () => {
+        const text = el('jsonPayload').value;
+        try {
+          const payload = JSON.parse(text);
+          const res = await fetch('/api/v1/led/control', {
+            method: 'POST',
+            headers: adminHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify(payload)
+          });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          const body = await res.text();
+          el('firmwareStatus').textContent = `JSON accepted: ${body || 'OK'}`;
+        } catch (error) {
+          el('firmwareStatus').textContent = `JSON upload failed: ${error.message}
+The device rejected or could not process the command.`;
+        }
+      });
+
+      const firmwareProgressBar = el('firmwareProgressBar');
+      el('uploadFirmwareBtn').addEventListener('click', () => {
+        const fileInput = el('firmwareFile');
+        const file = fileInput.files[0];
+        if (!file) {
+          el('firmwareStatus').textContent = 'No firmware file selected.';
+          return;
+        }
+
+        const metadata = {
+          target: el('otaTarget').value,
+          version: el('otaVersion').value,
+          length: file.size,
+          sha256: 'offline-placeholder-sha256'
+        };
+        const form = new FormData();
+        form.append('file', file);
+        form.append('target', metadata.target);
+        form.append('version', metadata.version);
+        form.append('length', String(metadata.length));
+        form.append('digest', metadata.sha256);
+
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/api/v1/ota/upload');
+        const token = adminToken();
+        if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) {
+            const pct = Math.round((event.loaded / event.total) * 100);
+            firmwareProgressBar.style.width = `${pct}%`;
+            el('firmwareStatus').textContent = `Uploading ${file.name} (${pct}%)
+Metadata: ${JSON.stringify(metadata, null, 2)}`;
+          }
+        };
+
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            firmwareProgressBar.style.width = '100%';
+            el('firmwareStatus').textContent = `Upload complete.
+Target: ${metadata.target}
+Version: ${metadata.version}
+OTAPackage: ${xhr.responseText || 'accepted'}`;
+          } else {
+            firmwareProgressBar.style.width = '0%';
+            el('firmwareStatus').textContent = `Upload failed: ${xhr.status} ${xhr.responseText || 'no response'}`;
+          }
+        };
+
+        xhr.onerror = () => {
+          firmwareProgressBar.style.width = '0%';
+          el('firmwareStatus').textContent = 'Upload failed: network/endpoint unreachable. Offline dashboard remains available for local testing.';
+        };
+
+        xhr.send(form);
+      });
+
+      render();
+    </script>
+  </body>
+</html>
