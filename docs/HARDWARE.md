@@ -22,6 +22,10 @@ The product brief references `RP2354B`, but the Pico SDK naming is still `rp2350
 - 30 GPIO vs 48 GPIO package distinction
 - GPIO 30/31/32 valid on the 48 GPIO B package
 - B-package assumption used in `cmake/raster_custom.h`
+- The firmware now includes an SH1106G-compatible 128x64 I2C OLED manager on
+  GPIO20 (SDA), GPIO21 (SCL), address `0x3c`, and 400 kHz I2C. The controller
+  address, display variant, pull-ups, and electrical levels still require
+  confirmation on the assembled board.
 
 ## What is intentionally not asserted here
 - Board-specific flash type or density

@@ -12,6 +12,7 @@
 #include "drivers/button.h"
 #include "drivers/buzzer.h"
 #include "drivers/oled.h"
+#include "drivers/oled_manager.h"
 #include "drivers/status_led.h"
 #include "network/w5500_eth.h"
 #include "network/http_server.h"
@@ -188,6 +189,7 @@ static void initialize_peripherals(void) {
     button_init(&button_config);
     buzzer_init(&buzzer_config);
     (void)channel_manager_init();
+    (void)oled_manager_init();
 }
 
 static void apply_configuration(void) {
@@ -246,6 +248,7 @@ int main(void) {
             }
             buzzer_service(now_ms);
             status_led_service(now_ms);
+            oled_manager_service();
             channel_manager_service();
             bool link_up = w5500_hw_link_up();
             w5500_eth_update(&ethernet, now_ms, link_up);

@@ -9,6 +9,8 @@ add_executable(raster_pick_to_light
     drivers/button.c
     drivers/buzzer.c
     drivers/oled.c
+    drivers/sh1106g.c
+    drivers/oled_manager.c
     drivers/status_led.c
     drivers/ws2812.c
     network/http_server.c
