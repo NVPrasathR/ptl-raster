@@ -1,0 +1,21 @@
+# Build outputs
+build/
+dist/
+out/
+
+# Firmware artifacts
+*.elf
+*.bin
+*.hex
+*.uf2
+*.map
+
+# IDE and editor files
+.DS_Store
+.idea/
+.vscode/
+
+# Local configuration
+.env
+.env.*
+!.env.example
