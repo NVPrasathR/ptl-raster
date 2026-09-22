@@ -1,504 +1,914 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Raster Pick to Light</title>
     <style>
       :root {
-        --bg: #08131f;
-        --panel: #101d2a;
-        --panel-alt: #122638;
-        --line: rgba(148, 163, 184, 0.2);
-        --text: #e2e8f0;
-        --muted: #94a3b8;
-        --accent: #22c55e;
-        --warn: #f59e0b;
+        color-scheme: light;
+        --bg: #f5f8ff;
+        --panel: rgba(255, 255, 255, 0.92);
+        --panel-strong: #ffffff;
+        --line: rgba(17, 24, 39, 0.10);
+        --text: #0f172a;
+        --muted: #64748b;
+        --primary: #2563eb;
+        --primary-soft: rgba(37, 99, 235, 0.10);
+        --success: #22c55e;
+        --warning: #f59e0b;
         --danger: #ef4444;
-        --info: #38bdf8;
-        --shadow: 0 12px 30px rgba(2, 6, 23, 0.35);
+        --shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
+        --radius: 20px;
+      }
+      html[data-theme="dark"] {
+        color-scheme: dark;
+        --bg: #0b1321;
+        --panel: rgba(16, 24, 39, 0.95);
+        --panel-strong: #10192a;
+        --line: rgba(148, 163, 184, 0.16);
+        --text: #e5eefb;
+        --muted: #94a3b8;
+        --primary: #38bdf8;
+        --primary-soft: rgba(56, 189, 248, 0.12);
+        --success: #22c55e;
+        --warning: #fbbf24;
+        --danger: #f87171;
+        --shadow: 0 14px 30px rgba(2, 6, 23, 0.35);
       }
       * { box-sizing: border-box; }
-      html, body { margin: 0; padding: 0; min-height: 100%; font-family: "SF Pro Display", "Segoe UI", sans-serif; background: var(--bg); color: var(--text); }
-      body { padding: 16px; }
-      .app { max-width: 1400px; margin: 0 auto; }
-      .topbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 14px; background: linear-gradient(180deg, rgba(13,33,51,0.95), rgba(10,17,28,0.95)); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); }
-      .brand { display: flex; align-items: center; gap: 12px; font-weight: 700; }
-      .logo { width: 14px; height: 14px; border-radius: 50%; background: linear-gradient(135deg, #22c55e, #38bdf8); box-shadow: 0 0 18px rgba(34, 197, 94, 0.8); }
-      .status-pill { display: inline-flex; align-items: center; gap: 8px; border-radius: 999px; padding: 8px 12px; border: 1px solid rgba(34, 197, 94, 0.5); background: rgba(34, 197, 94, 0.12); color: #d1fae5; font-size: 12px; }
-      .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
-      .grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px; margin-top: 16px; }
-      .card { background: rgba(16,29,42,0.92); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); }
-      .wide { grid-column: span 8; }
-      .mid { grid-column: span 5; }
-      .small { grid-column: span 4; }
-      .panel-header { padding: 14px 16px 10px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; }
-      .panel-header h3 { margin: 0; font-size: 0.98rem; }
-      .chip { border-radius: 999px; padding: 4px 8px; font-size: 11px; background: rgba(56,189,248,0.12); color: #bae6fd; border: 1px solid rgba(56,189,248,0.35); }
-      .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; padding: 16px; }
-      .stat { padding: 12px 14px; border-radius: 14px; background: rgba(18,38,56,0.8); border: 1px solid var(--line); }
-      .stat-label { color: var(--muted); font-size: 12px; }
-      .stat-value { margin-top: 8px; font-size: 1.6rem; font-weight: 700; }
-      .stat-sub { font-size: 11px; color: var(--muted); margin-top: 6px; }
-      .channels { padding: 12px 14px 14px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-      .channel { background: rgba(18,38,56,0.9); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
-      .channel-head { padding: 10px 12px; display: flex; justify-content: space-between; align-items: center; }
-      .channel-name { font-weight: 600; }
-      .toggle { width: 38px; height: 20px; border-radius: 999px; background: rgba(148,163,184,0.25); position: relative; transition: .2s ease; }
-      .toggle::after { content: ""; position: absolute; width: 14px; height: 14px; border-radius: 50%; background: white; top: 3px; left: 4px; transition: .2s ease; }
-      .channel.on .toggle { background: rgba(34,197,94,0.5); }
-      .channel.on .toggle::after { left: 20px; }
-      .channel-body { padding: 0 12px 12px; }
-      .mini-metric { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin: 8px 0; }
-      .bar { height: 7px; border-radius: 999px; background: rgba(148,163,184,0.12); overflow: hidden; }
-      .bar > span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--info), var(--accent)); }
-      .two-col { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 16px; }
-      .panel-body { padding: 16px; }
-      .stack { display: grid; gap: 12px; }
-      .row { display: flex; gap: 12px; justify-content: space-between; align-items: center; }
-      .muted { color: var(--muted); }
-      .field { display: grid; gap: 8px; }
-      .field label { font-size: 12px; color: var(--muted); }
-      input, select, textarea, button { width: 100%; border-radius: 10px; border: 1px solid rgba(148,163,184,0.2); background: rgba(15,23,42,0.8); color: var(--text); padding: 10px 12px; font: inherit; }
-      input:focus, select:focus, textarea:focus { outline: 2px solid rgba(56,189,248,0.3); border-color: rgba(56,189,248,0.5); }
-      textarea { min-height: 155px; resize: vertical; }
-      button { cursor: pointer; transition: transform .15s ease, border .15s ease; font-weight: 600; }
-      button:hover { transform: translateY(-1px); }
-      .primary { background: linear-gradient(135deg, #0ea5e9, #22c55e); border: none; color: white; }
-      .secondary { background: rgba(30,41,59,0.9); }
-      .danger { background: rgba(239,68,68,0.12); border-color: rgba(239,68,68,0.35); color: #fecaca; }
-      .snapshot { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-      .keyval { border: 1px solid var(--line); border-radius: 12px; background: rgba(15,23,42,0.7); padding: 10px 12px; }
-      .keyval .label { color: var(--muted); font-size: 11px; }
-      .keyval .value { margin-top: 6px; font-weight: 600; }
-      .progress { margin-top: 12px; }
-      .progress-bar { height: 10px; border-radius: 999px; background: rgba(148,163,184,0.12); overflow: hidden; }
-      .progress-bar > span { display: block; width: 0%; height: 100%; background: linear-gradient(90deg, #38bdf8, #22c55e); transition: width .2s ease; }
-      .log { margin-top: 12px; background: rgba(2, 6, 23, 0.8); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; color: #dbeafe; min-height: 110px; white-space: pre-wrap; font-size: 12px; line-height: 1.5; }
-      @media (max-width: 960px) {
-        .stats { grid-template-columns: repeat(2, minmax(0,1fr)); }
-        .wide, .mid, .small { grid-column: auto; }
-        .two-col { grid-template-columns: 1fr; }
+      html, body { margin: 0; min-height: 100%; font-family: Inter, "SF Pro Display", "Segoe UI", sans-serif; background: var(--bg); color: var(--text); }
+      body { transition: background .2s ease, color .2s ease; }
+      body { overflow: hidden; }
+      a { color: inherit; text-decoration: none; }
+      button, input, select, textarea { font: inherit; }
+      .app {
+        display: grid;
+        grid-template-columns: 240px minmax(0, 1fr);
+        height: calc(100vh - 72px);
+        overflow: hidden;
       }
-      @media (max-width: 640px) {
-        .channels { grid-template-columns: 1fr; }
-        .stats { grid-template-columns: 1fr; }
-        .topbar { flex-direction: column; align-items: flex-start; }
+      .app-header {
+        height: 72px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 24px;
+        border-bottom: 1px solid var(--line);
+        background: var(--panel-strong);
+      }
+      .header-brand { display: flex; align-items: center; gap: 14px; }
+      .app-header .brand { margin: 0; padding: 0; border: 0; }
+      .app-header .brand-mark { width: 44px; height: 44px; border-radius: 12px; font-size: 20px; }
+      .header-tools { display: flex; align-items: center; gap: 20px; }
+      .header-clock { text-align: center; font-weight: 700; }
+      .header-clock span { display: block; color: var(--muted); font-size: .78rem; font-weight: 500; margin-top: 3px; }
+      .theme-switch { display: flex; overflow: hidden; border: 1px solid var(--primary); border-radius: 999px; }
+      .theme-switch button { width: 48px; min-height: 34px; border: 0; background: transparent; color: var(--text); cursor: pointer; font-size: 1.05rem; }
+      .theme-switch button.active { background: var(--primary); color: white; }
+      .logout { border: 0; border-left: 1px solid var(--line); background: transparent; color: var(--text); padding: 8px 0 8px 20px; font-weight: 700; cursor: pointer; }
+      .sidebar {
+        padding: 18px 16px;
+        border-right: 1px solid var(--line);
+        background: linear-gradient(180deg, rgba(255,255,255,0.72), rgba(255,255,255,0.52));
+        backdrop-filter: blur(12px);
+        height: 100%;
+        overflow: hidden;
+        position: sticky;
+        top: 0;
+        display: flex;
+        flex-direction: column;
+        transition: width .2s ease, transform .2s ease, padding .2s ease;
+      }
+      html[data-theme="dark"] .sidebar { background: linear-gradient(180deg, rgba(8, 15, 28, 0.92), rgba(8, 15, 28, 0.82)); }
+      .brand {
+        display: flex; align-items: center; gap: 12px; margin-bottom: 22px; padding: 10px 10px 18px; border-bottom: 1px solid var(--line);
+      }
+      .brand-mark {
+        width: 54px; height: 54px; border-radius: 16px; display: grid; place-items: center; color: white;
+        background: linear-gradient(135deg, #1d4ed8, #2563eb 52%, #38bdf8);
+        box-shadow: 0 10px 20px rgba(37, 99, 235, 0.28);
+        font-size: 24px;
+      }
+      .brand h1 { margin: 0; font-size: 1.15rem; letter-spacing: .02em; }
+      .brand p { margin: 2px 0 0; color: var(--muted); font-size: .74rem; letter-spacing: .08em; text-transform: uppercase; }
+      .nav { display: grid; gap: 10px; }
+      .nav a {
+        display: flex; align-items: center; gap: 12px; padding: 14px 14px; border-radius: 16px; color: var(--muted);
+        border: 1px solid transparent; transition: .15s ease; font-weight: 600;
+      }
+      .nav a.active, .nav a:hover { background: var(--primary-soft); color: var(--primary); border-color: rgba(37, 99, 235, 0.18); }
+      .nav-icon { width: 22px; display: inline-grid; place-items: center; color: currentColor; font-size: 1.08rem; }
+      .sidebar-footer { margin-top: auto; padding: 16px 10px 0; color: var(--muted); font-size: .85rem; line-height: 1.5; }
+      .sidebar-toggle {
+        margin-left: auto;
+        width: 44px;
+        height: 44px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--panel-strong);
+        color: var(--text);
+        display: inline-grid;
+        place-items: center;
+        cursor: pointer;
+        box-shadow: var(--shadow);
+      }
+      .sidebar-toggle:hover { transform: translateY(-1px); }
+      .content {
+        padding: 24px 30px 0;
+        overflow-y: auto;
+        overflow-x: hidden;
+        min-width: 0;
+      }
+      .topbar {
+        display: flex; justify-content: space-between; align-items: center; gap: 12px;
+        padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none;
+      }
+      .topbar-left { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; min-width: 0; }
+      .title { font-size: 1.1rem; font-weight: 800; margin: 0; }
+      .subtitle { color: var(--muted); font-size: .92rem; margin: 2px 0 0; }
+      .page-title-wrap { display: flex; align-items: center; gap: 12px; min-width: 0; }
+      .status-pill {
+        display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 999px;
+        background: rgba(34, 197, 94, 0.12); color: var(--success); font-size: .82rem; font-weight: 700;
+      }
+      .status-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--success); box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.12); }
+      .toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+      .ghost-btn {
+        border: 1px solid var(--line); background: var(--panel-strong); color: var(--text); padding: 10px 14px; border-radius: 999px; cursor: pointer;
+        transition: .15s ease; box-shadow: var(--shadow);
+      }
+      .ghost-btn:hover { transform: translateY(-1px); }
+      .hero, .panel { margin-top: 16px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--panel); box-shadow: var(--shadow); }
+      .hero { padding: 18px; }
+      .grid-4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+      .metric {
+        border: 1px solid var(--line); border-radius: 18px; padding: 16px; background: rgba(255,255,255,0.45);
+      }
+      html[data-theme="dark"] .metric { background: rgba(255,255,255,0.03); }
+      .metric .label { color: var(--muted); font-weight: 700; font-size: .84rem; }
+      .metric .value { margin-top: 8px; font-size: 1.9rem; font-weight: 800; letter-spacing: -.03em; }
+      .metric .sub { margin-top: 6px; color: var(--muted); font-size: .84rem; }
+      .section-head {
+        display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 16px 18px 0;
+      }
+      .section-head h2 { margin: 0; font-size: 1.05rem; }
+      .section-head .chip {
+        display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 999px;
+        background: var(--primary-soft); color: var(--primary); font-size: .8rem; font-weight: 700;
+      }
+      .section-body { padding: 18px; }
+      .triple { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+      .card {
+        border: 1px solid var(--line); border-radius: 18px; padding: 16px; background: rgba(255,255,255,0.45);
+      }
+      html[data-theme="dark"] .card { background: rgba(255,255,255,0.03); }
+      .card h3 { margin: 0 0 12px; font-size: .98rem; }
+      .kv { display: grid; grid-template-columns: 1.1fr 1fr; gap: 10px 14px; align-items: center; font-size: .95rem; }
+      .kv .k { color: var(--muted); }
+      .kv .v { text-align: right; font-weight: 700; }
+      .badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; font-size: .78rem; font-weight: 700; }
+      .badge.ok { background: rgba(34, 197, 94, 0.14); color: var(--success); }
+      .badge.warn { background: rgba(245, 158, 11, 0.14); color: var(--warning); }
+      .badge.info { background: rgba(37, 99, 235, 0.12); color: var(--primary); }
+      .channel-grid { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 10px; }
+      .channel {
+        border: 1px solid var(--line); border-radius: 18px; padding: 12px 8px; text-align: center; background: rgba(255,255,255,0.45);
+      }
+      html[data-theme="dark"] .channel { background: rgba(255,255,255,0.03); }
+      .channel .lamp { width: 36px; height: 36px; border-radius: 50%; margin: 0 auto 10px; background: #e2e8f0; box-shadow: inset 0 0 0 6px rgba(255,255,255,.45); }
+      .channel.on .lamp { box-shadow: 0 0 0 8px rgba(34,197,94,0.12), 0 0 22px rgba(34,197,94,0.28); }
+      .channel .id { font-size: 1rem; font-weight: 800; }
+      .channel .state { margin-top: 6px; font-size: .82rem; font-weight: 700; color: var(--muted); }
+      .channel.on .state { color: var(--success); }
+      .actions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+      .action {
+        padding: 16px; border-radius: 18px; border: 1px solid var(--line); background: rgba(255,255,255,0.50);
+        font-weight: 700;
+      }
+      html[data-theme="dark"] .action { background: rgba(255,255,255,0.03); }
+      .action span { display: block; margin-top: 6px; color: var(--muted); font-size: .84rem; font-weight: 600; }
+      .split { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+      .progress { height: 10px; border-radius: 999px; background: rgba(148,163,184,0.16); overflow: hidden; }
+      .progress > span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--primary), var(--success)); }
+      .time { font-size: 1.8rem; font-weight: 800; letter-spacing: -.04em; }
+      .muted { color: var(--muted); }
+      .receive-console {
+        margin: 0;
+        min-height: 180px;
+        max-height: 360px;
+        overflow: auto;
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #0b1220;
+        color: #b8f7d4;
+        font: 12px/1.55 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+      .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+      .field label { display: block; margin-bottom: 8px; color: var(--muted); font-size: .82rem; font-weight: 700; }
+      .field input, .field select, .field textarea {
+        width: 100%; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line);
+        background: rgba(255,255,255,0.65); color: var(--text);
+      }
+      html[data-theme="dark"] .field input, html[data-theme="dark"] .field select, html[data-theme="dark"] .field textarea {
+        background: rgba(2, 6, 23, 0.38);
+      }
+      .pages { margin-top: 16px; }
+      .page { display: none; }
+      .page.active { display: block; }
+      .footer-note { margin: 18px 0 0; color: var(--muted); font-size: .82rem; }
+      .page-heading { display: flex; align-items: center; gap: 14px; }
+      .page-heading-icon { width: 50px; height: 50px; display: grid; place-items: center; color: var(--primary); font-size: 2.2rem; }
+      .page-heading .title { font-size: 1.8rem; }
+      .page-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(360px, .92fr); gap: 18px; }
+      .stack { display: grid; gap: 18px; align-content: start; }
+      .primary-btn, .outline-btn, .danger-btn { min-height: 44px; padding: 10px 18px; border-radius: 6px; font-weight: 700; cursor: pointer; }
+      .primary-btn { border: 1px solid var(--primary); background: var(--primary); color: white; }
+      .outline-btn { border: 1px solid rgba(37, 99, 235, .34); background: transparent; color: var(--primary); }
+      .danger-btn { border: 1px solid var(--danger); background: var(--danger); color: white; }
+      .control-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+      .table-wrap { overflow-x: auto; }
+      .channel-table { width: 100%; border-collapse: collapse; min-width: 800px; }
+      .channel-table th, .channel-table td { padding: 10px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+      .channel-table th { color: var(--muted); font-size: .82rem; }
+      .channel-table input[type="text"] { width: 100%; min-width: 110px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 5px; background: var(--panel-strong); color: var(--text); }
+      .channel-table .toggle { appearance: none; border: 0; display: inline-flex; width: 48px; height: 26px; padding: 3px; border-radius: 999px; background: #94a3b8; vertical-align: middle; cursor: pointer; transition: background .15s ease; }
+      .channel-table .toggle::after { content: ''; width: 20px; height: 20px; border-radius: 50%; background: white; box-shadow: 0 1px 3px rgba(15,23,42,.28); transition: transform .15s ease; }
+      .toggle.on { justify-content: flex-end; background: var(--success); }
+      .channel-table input[type="color"] { width: 44px; height: 32px; padding: 3px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel-strong); cursor: pointer; vertical-align: middle; }
+      .channel-table input[type="range"] { width: 104px; accent-color: var(--primary); vertical-align: middle; }
+      .channel-table .outline-btn { min-height: 34px; padding: 6px 10px; border-radius: 6px; font-size: .82rem; }
+      .icon-btn { width: 34px; padding: 0 !important; display: inline-grid; place-items: center; }
+      .upload-zone { display: grid; place-items: center; min-height: 248px; border: 2px dashed rgba(37, 99, 235, .22); border-radius: 10px; text-align: center; color: var(--muted); }
+      .notice { padding: 16px; border-radius: 6px; background: var(--primary-soft); color: var(--primary); }
+      .settings-tabs { display: flex; justify-content: space-between; gap: 8px; padding: 8px; overflow-x: auto; }
+      .settings-tabs button { flex: 1 0 max-content; min-height: 46px; border: 0; border-radius: 6px; background: transparent; color: var(--text); font-weight: 700; }
+      .settings-tabs button.active { background: var(--primary); color: white; }
+      .toast { position: fixed; right: 22px; bottom: 22px; z-index: 70; max-width: min(380px, calc(100vw - 44px)); padding: 12px 16px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel-strong); box-shadow: var(--shadow); color: var(--text); opacity: 0; pointer-events: none; transform: translateY(8px); transition: .2s ease; }
+      .toast.show { opacity: 1; transform: translateY(0); }
+      .toast.error { border-color: rgba(239, 68, 68, .35); color: var(--danger); }
+      button:disabled, input:disabled { cursor: not-allowed; opacity: .58; }
+      .sidebar-collapsed .app { grid-template-columns: 92px minmax(0, 1fr); }
+      .sidebar-collapsed .sidebar { padding-left: 12px; padding-right: 12px; }
+      .sidebar-collapsed .brand { justify-content: center; }
+      .sidebar-collapsed .brand h1,
+      .sidebar-collapsed .brand p,
+      .sidebar-collapsed .nav span.label,
+      .sidebar-collapsed .sidebar-footer { display: none; }
+      .sidebar-collapsed .nav a { justify-content: center; padding: 14px 0; }
+      .sidebar-collapsed .nav-icon { width: 24px; font-size: 1.2rem; }
+      .sidebar-backdrop {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(2, 6, 23, 0.38);
+        z-index: 40;
+      }
+      .mobile-only { display: none; }
+      @media (max-width: 1180px) {
+        .app-header { padding: 8px 16px; }
+        .app-header .brand-mark { width: 44px; height: 44px; }
+        .header-tools { gap: 12px; }
+        .header-clock, .logout { display: none; }
+        .app { grid-template-columns: 1fr; }
+        .sidebar {
+          position: fixed;
+          inset: 72px auto 0 0;
+          width: min(88vw, 300px);
+          transform: translateX(-102%);
+          z-index: 50;
+          border-right: 1px solid var(--line);
+          border-bottom: 0;
+          box-shadow: var(--shadow);
+        }
+        body.nav-open .sidebar { transform: translateX(0); }
+        body.nav-open .sidebar-backdrop { display: block; }
+        body.nav-open { overflow: hidden; }
+        .content { padding: 14px; }
+        .mobile-only { display: inline-grid; }
+        .sidebar-collapsed .app { grid-template-columns: 1fr; }
+        .sidebar-collapsed .sidebar { width: min(88vw, 300px); }
+        .sidebar-collapsed .brand { justify-content: flex-start; }
+        .sidebar-collapsed .brand h1,
+        .sidebar-collapsed .brand p,
+        .sidebar-collapsed .nav span.label,
+        .sidebar-collapsed .sidebar-footer { display: block; }
+        .sidebar-collapsed .nav a { justify-content: flex-start; padding: 14px 14px; }
+      }
+      @media (max-width: 920px) {
+        .grid-4, .triple, .split, .actions, .form-grid, .page-grid { grid-template-columns: 1fr 1fr; }
+        .channel-grid { grid-template-columns: repeat(5, minmax(0,1fr)); }
+      }
+      @media (max-width: 680px) {
+        .grid-4, .triple, .split, .actions, .form-grid, .page-grid { grid-template-columns: 1fr; }
+        .channel-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+        .topbar { flex-direction: column; align-items: stretch; }
+        .topbar-left { align-items: flex-start; }
+        .toolbar { justify-content: space-between; }
+        .page-title-wrap { width: 100%; justify-content: space-between; }
+        .title { font-size: 1rem; }
+        .subtitle { font-size: .82rem; }
       }
     </style>
   </head>
   <body>
-    <div class="app">
-      <header class="topbar">
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <header class="app-header">
+      <div class="header-brand">
+        <button class="sidebar-toggle" id="sidebarToggle" type="button" aria-label="Toggle sidebar">☰</button>
         <div class="brand">
-          <span class="logo"></span>
-          <span>Raster Pick to Light</span>
+          <div class="brand-mark">⌁</div>
+          <div>
+            <h1>RP2354B</h1>
+            <p>Embedded system</p>
+          </div>
         </div>
-        <div class="status-pill"><span class="status-dot"></span><span id="deviceOnlineText">System Online</span></div>
-      </header>
+      </div>
+      <div class="header-tools">
+        <div class="header-clock" id="headerClock">10:45:32 AM<span id="headerDate">21 May 2025</span></div>
+        <div class="theme-switch" aria-label="Theme selection">
+          <button id="themeLight" type="button" aria-label="Use light theme">☼</button>
+          <button id="themeToggle" type="button" aria-label="Use dark theme">☾</button>
+        </div>
+        <button class="logout" id="accessTokenButton" type="button" aria-label="Set access token" title="Set access token">⌘&nbsp; Access</button>
+        <button class="logout" id="logoutButton" type="button">⇥&nbsp; Logout</button>
+      </div>
+    </header>
+    <div class="app">
+      <aside class="sidebar">
+        <nav class="nav">
+          <a class="active" href="#dashboard"><span class="nav-icon" aria-hidden="true">⌂</span><span class="label">Dashboard</span></a>
+          <a href="#network"><span class="nav-icon" aria-hidden="true">◎</span><span class="label">Network</span></a>
+          <a href="#channels"><span class="nav-icon" aria-hidden="true">▦</span><span class="label">Channels</span></a>
+          <a href="#ota"><span class="nav-icon" aria-hidden="true">⇧</span><span class="label">OTA Update</span></a>
+          <a href="#settings"><span class="nav-icon" aria-hidden="true">⚙</span><span class="label">Settings</span></a>
+        </nav>
+        <div class="sidebar-footer">
+          Embedded UI aligned to the <strong>docs/ui</strong> design reference set.
+        </div>
+      </aside>
 
-      <main class="grid">
-        <section class="card wide">
-          <div class="panel-header"><h3>System Overview</h3><span class="chip" id="deviceModeChip">Normal</span></div>
-          <div class="stats">
-            <div class="stat">
-              <div class="stat-label">Device</div>
-              <div class="stat-value" id="deviceNameValue">Shelf A1</div>
-              <div class="stat-sub" id="deviceAddressValue">10.0.0.42</div>
+      <main class="content">
+        <header class="topbar">
+          <div class="topbar-left">
+            <div class="page-title-wrap">
+              <div class="page-heading-icon" id="pageIcon">⌂</div>
+              <div>
+              <div class="title" id="pageTitle">Dashboard</div>
+              <div class="subtitle" id="pageSubtitle">Overview of your RP2354B embedded system</div>
+              </div>
             </div>
-            <div class="stat">
-              <div class="stat-label">Active Channels</div>
-              <div class="stat-value" id="activeChannelsValue">8</div>
-              <div class="stat-sub">of 10</div>
-            </div>
-            <div class="stat">
-              <div class="stat-label">LED Health</div>
-              <div class="stat-value" id="ledHealthValue">96%</div>
-              <div class="stat-sub">1380 LEDs</div>
-            </div>
-            <div class="stat">
-              <div class="stat-label">Team Zones</div>
-              <div class="stat-value" id="teamZoneValue">3</div>
-              <div class="stat-sub">live assignments</div>
+            <div class="status-pill"><span class="status-dot"></span><span id="systemStatus">System Running</span></div>
+          </div>
+        </header>
+
+        <div class="pages">
+          <div class="page active" data-page="dashboard">
+            <section class="hero">
+              <div class="grid-4">
+                <div class="metric"><div class="label">CPU Usage</div><div class="value">42%</div><div class="sub"><span class="badge info">Live</span></div></div>
+                <div class="metric"><div class="label">RAM Usage</div><div class="value">68%</div><div class="sub">544 MB / 800 MB</div></div>
+                <div class="metric"><div class="label">CPU Temperature</div><div class="value">38 °C</div><div class="sub"><span class="badge warn">Normal</span></div></div>
+                <div class="metric"><div class="label">System Voltage</div><div class="value">3.3 V</div><div class="sub"><span class="badge ok">Stable</span></div></div>
+              </div>
+            </section>
+
+            <section class="panel">
+              <div class="section-head"><h2>Device Information</h2><span class="chip">Live device data</span></div>
+              <div class="section-body triple">
+                <div class="card">
+                  <h3>Device Information</h3>
+                  <div class="kv">
+                    <div class="k">Model</div><div class="v" id="deviceModel">RP2354B</div>
+                    <div class="k">Firmware Version</div><div class="v" id="deviceFirmware">v1.0.0</div>
+                    <div class="k">Uptime</div><div class="v" id="deviceUptime">2d 14h 32m</div>
+                    <div class="k">Boot Mode</div><div class="v">FLASH</div>
+                  </div>
+                </div>
+                <div class="card">
+                  <h3>Network Status</h3>
+                  <div class="kv">
+                    <div class="k">IP Address</div><div class="v" id="deviceIp">172.17.0.102</div>
+                    <div class="k">Subnet Mask</div><div class="v" id="deviceSubnet">255.255.252.0</div>
+                    <div class="k">Gateway</div><div class="v" id="deviceGateway">172.17.3.254</div>
+                    <div class="k">DNS</div><div class="v" id="deviceDns">172.17.3.254</div>
+                    <div class="k">MAC Address</div><div class="v" id="deviceMac">A4:CF:12:34:56:78</div>
+                  </div>
+                </div>
+                <div class="card">
+                  <h3>Stream Status</h3>
+                  <div class="kv">
+                    <div class="k">Protocol</div><div class="v">RTMP</div>
+                    <div class="k">Server</div><div class="v">rtmp://live.example.com/live</div>
+                    <div class="k">Bitrate</div><div class="v">2500 kbps</div>
+                    <div class="k">Resolution</div><div class="v">1920 × 1080</div>
+                    <div class="k">FPS</div><div class="v">30</div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="panel">
+              <div class="section-head"><h2>Quick Actions</h2><span class="chip">Open page tabs</span></div>
+              <div class="section-body">
+                <div class="actions">
+                  <a class="action" href="#network">Network Settings<span>Open the Network page</span></a>
+                  <a class="action" href="#channels">Channel Control<span>Open the Channels page</span></a>
+                  <a class="action" href="#ota">OTA Update<span>Open the OTA page</span></a>
+                  <a class="action" href="#settings">Settings<span>Open the Settings page</span></a>
+                </div>
+              </div>
+            </section>
+
+            <section class="panel">
+              <div class="section-head"><h2>TCP Receive Console</h2><span class="chip" id="receiveConsoleStatus">Waiting for device data</span></div>
+              <div class="section-body">
+                <pre class="receive-console" id="receiveConsole">No channel data received yet.</pre>
+              </div>
+            </section>
+
+            <section class="split">
+              <div class="panel">
+                <div class="section-head"><h2>Storage</h2><span class="chip">Local status</span></div>
+                <div class="section-body">
+                  <div>12.6 GB used / 29.8 GB total</div>
+                  <div style="display:flex; justify-content:space-between; margin:10px 0 8px; color:var(--muted);"><span>Progress</span><span>42%</span></div>
+                  <div class="progress"><span style="width:42%;"></span></div>
+                </div>
+              </div>
+              <div class="panel">
+                <div class="section-head"><h2>System Time</h2><span class="chip">Clock</span></div>
+                <div class="section-body">
+                  <div class="time" id="systemTime">10:45:32 AM</div>
+                  <div class="muted" id="systemDate">21 May 2025</div>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <div class="page" data-page="network">
+            <div class="page-grid">
+              <section class="panel">
+                <div class="section-head"><h2>⌘&nbsp; IP Configuration</h2></div>
+                <div class="section-body">
+                  <div class="control-row"><button class="primary-btn" data-action="network-dhcp">DHCP (Auto)</button><button class="outline-btn" data-action="network-static">Static (Manual)</button></div>
+                  <div class="form-grid" style="margin-top:24px;">
+                    <div class="field"><label>Device Name</label><input id="deviceNameField" type="text" value="raster-pick-to-light" /></div>
+                    <div class="field"><label>Mode</label><select id="networkMode"><option>DHCP</option><option>Static</option></select></div>
+                    <div class="field"><label>IP Address</label><input id="staticIpField" type="text" value="172.17.0.102" /></div>
+                    <div class="field"><label>Subnet Mask</label><input id="subnetField" type="text" value="255.255.252.0" /></div>
+                    <div class="field"><label>Gateway</label><input id="gatewayField" type="text" value="172.17.3.254" /></div>
+                    <div class="field"><label>DNS Server</label><input id="dnsField" type="text" value="172.17.3.254" /></div>
+                  </div>
+                  <div class="notice" id="networkNotice" style="margin-top:24px;">ⓘ&nbsp; Using DHCP. Network parameters are assigned automatically.</div>
+                  <div class="control-row" style="margin-top:24px;"><button class="primary-btn" data-action="save-config">▣&nbsp; Save Settings</button><button class="outline-btn" data-action="refresh-config">⟳&nbsp; Refresh</button></div>
+                </div>
+              </section>
+              <div class="stack">
+                <section class="panel"><div class="section-head"><h2>⌁&nbsp; Connection Status</h2><span class="badge ok" id="netStateChip">Connected</span></div><div class="section-body"><div class="kv"><div class="k">Connection Type</div><div class="v">Ethernet (W5500)</div><div class="k">Link Status</div><div class="v">Up (100 Mbps)</div><div class="k">IP Address</div><div class="v" id="networkIp">172.17.0.102</div><div class="k">Subnet Mask</div><div class="v" id="networkSubnet">255.255.252.0</div><div class="k">Gateway</div><div class="v" id="networkGateway">172.17.3.254</div><div class="k">DNS Server</div><div class="v" id="networkDns">172.17.3.254</div></div></div></section>
+                <section class="panel"><div class="section-head"><h2>⌕&nbsp; Network Tools</h2></div><div class="section-body"><div class="field"><label>Ping Test</label><input id="pingTarget" type="text" placeholder="Enter IP address (e.g. 8.8.8.8)" /></div><div class="control-row" style="margin-top:12px;"><button class="primary-btn" data-action="ping">Ping</button><button class="outline-btn" data-action="scan-network">⌕&nbsp; Scan Network</button></div></div></section>
+              </div>
             </div>
           </div>
-        </section>
 
-        <section class="card small">
-          <div class="panel-header"><h3>Device / Team State</h3><span class="chip">Live</span></div>
-          <div class="panel-body snapshot" id="deviceSnapshot"></div>
-        </section>
-
-        <section class="card wide">
-          <div class="panel-header"><h3>Channel / Shelf / LED Status</h3><span class="chip">10 Channels</span></div>
-          <div class="channels" id="channelGrid"></div>
-        </section>
-
-        <section class="card small">
-          <div class="panel-header"><h3>LED + Team Details</h3><span class="chip" id="teamCountChip">3 Teams</span></div>
-          <div class="panel-body stack" id="teamDetails"></div>
-        </section>
-
-        <section class="card mid">
-          <div class="panel-header"><h3>Channel Configuration</h3><span class="chip">Config</span></div>
-          <div class="panel-body stack">
-            <div class="field">
-              <label for="channelSelect">Channel</label>
-              <select id="channelSelect"></select>
-            </div>
-            <div class="field">
-              <label for="ledCount">LED count</label>
-              <input id="ledCount" type="number" min="6" max="200" value="138" />
-            </div>
-            <div class="field">
-              <label for="stripLength">LEDs per strip</label>
-              <input id="stripLength" type="number" min="1" max="12" value="6" />
-            </div>
-            <div class="field">
-              <label for="brightness">Brightness</label>
-              <input id="brightness" type="range" min="10" max="255" value="180" />
-            </div>
-            <div class="row">
-              <button id="applyChannelConfig" class="primary">Apply Channel Config</button>
-            </div>
+          <div class="page" data-page="channels">
+            <section class="panel">
+              <div class="section-head"><h2>☷&nbsp; Channel Control</h2><div class="control-row"><button class="primary-btn" data-action="channels-on">◉&nbsp; All ON</button><button class="outline-btn" data-action="channels-off">◯&nbsp; All OFF</button><button class="outline-btn" data-action="channels-apply">⟳&nbsp; Apply Changes</button></div></div>
+              <div class="section-body table-wrap">
+                <table class="channel-table"><thead><tr><th>#</th><th>Channel Name</th><th>Status</th><th>Color</th><th>Brightness</th><th>Test</th><th>Actions</th></tr></thead><tbody id="channelGrid"></tbody></table>
+              </div>
+            </section>
+            <div class="notice" style="margin-top:18px;">ⓘ&nbsp; Changes are applied in real-time. Use Test to preview the channel output.</div>
           </div>
-        </section>
 
-        <section class="card mid">
-          <div class="panel-header"><h3>Network Configuration</h3><span class="chip">Ethernet</span></div>
-          <div class="panel-body stack">
-            <div class="field">
-              <label for="networkMode">Mode</label>
-              <select id="networkMode">
-                <option value="dhcp">DHCP</option>
-                <option value="static">Static</option>
-              </select>
-            </div>
-            <div class="field">
-              <label for="staticIp">Static IP</label>
-              <input id="staticIp" value="10.0.0.42" />
-            </div>
-            <div class="field">
-              <label for="gateway">Gateway</label>
-              <input id="gateway" value="10.0.0.1" />
-            </div>
-            <div class="field">
-              <label for="subnet">Subnet</label>
-              <input id="subnet" value="255.255.255.0" />
-            </div>
-            <div class="row">
-              <button id="applyNetworkConfig" class="primary">Apply Network</button>
-            </div>
+          <div class="page" data-page="ota">
+            <div class="page-grid"><div class="stack"><section class="panel"><div class="section-head"><h2 aria-label="Firmware Upload">⇧&nbsp; Upload New Firmware</h2></div><div class="section-body"><label class="upload-zone">▤<br /><strong>Drag &amp; drop a .uf2 file here</strong><br />or<br /><span class="primary-btn">Choose File</span><input type="file" hidden /></label><div class="card" style="margin-top:16px;"><strong>Selected File</strong><p>▤&nbsp; rp2350b_firmware_v1.1.0.uf2<br /><span class="muted">2.8 MB</span></p></div><button class="primary-btn" style="width:100%; margin-top:16px;">⇧&nbsp; Start OTA Update</button></div></section><section class="panel"><div class="section-head"><h2>⟳&nbsp; Update Progress</h2><strong>68%</strong></div><div class="section-body"><div class="progress"><span style="width:68%;"></span></div><div class="notice" style="margin-top:16px;"><strong>Uploading firmware...</strong><br />Please do not power off the device.</div></div></section></div><div class="stack"><section class="panel"><div class="section-head"><h2>▣&nbsp; Current Firmware</h2></div><div class="section-body"><div class="kv"><div class="k">Version</div><div class="v">v1.0.0</div><div class="k">Build Date</div><div class="v">21 May 2025</div><div class="k">Image Slot</div><div class="v" style="color:var(--success);">Active (A)</div><div class="k">Uptime</div><div class="v">2d 14h 32m</div></div></div></section><section class="panel"><div class="section-head"><h2>⚙&nbsp; Update Options</h2></div><div class="section-body"><p>☑&nbsp; Keep settings (preserve configuration)</p><p>☑&nbsp; Verify firmware after update</p><p>☐&nbsp; Reboot automatically after update</p><p>☐&nbsp; Switch to new image (dual bank)</p></div></section><section class="panel"><div class="section-head"><h2>▤&nbsp; Release Notes (v1.1.0)</h2></div><div class="section-body"><ul><li>Improved system stability</li><li>Added new channel effects</li><li>Optimized network performance</li></ul></div></section></div></div>
           </div>
-        </section>
 
-        <section class="card wide">
-          <div class="panel-header"><h3>Pharmacy JSON Tester</h3><span class="chip">Command API</span></div>
-          <div class="panel-body stack">
-            <textarea id="jsonPayload">{
-  "device": "Shelf-A1",
-  "channel": 3,
-  "shelf": "A-03",
-  "team": "Team-2",
-  "action": "light",
-  "color": "GREEN",
-  "leds": [6, 7, 8],
-  "blink": false,
-  "brightness": 180
-}</textarea>
-            <div class="row">
-              <button id="sendJson" class="primary">POST Pharmacy Command</button>
-              <button id="loadSampleJson" class="secondary">Load Sample</button>
-            </div>
+          <div class="page" data-page="settings">
+            <section class="panel settings-tabs"><button class="active">⚙&nbsp; General</button><button>▣&nbsp; Security</button><button>▤&nbsp; Display</button><button>◷&nbsp; Time</button><button>▤&nbsp; System</button><button>⟳&nbsp; Backup &amp; Restore</button></section>
+            <div class="page-grid"><div class="stack"><section class="panel"><div class="section-head"><h2>⚙&nbsp; Device Settings</h2></div><div class="section-body form-grid"><div class="field"><label>Device Name</label><input type="text" value="RP2350B" /></div><div class="field"><label>Location</label><input type="text" value="Pharmacy Shelf Locator" /></div><div class="field"><label>Description</label><input type="text" value="10 Channel LED Controller" /></div><div class="field"><label>Web Server Port</label><input type="text" value="80" /></div></div><div class="section-body"><p><span class="toggle on"></span>&nbsp; Enable on power up</p><p><span class="toggle on"></span>&nbsp; Status LED</p><p><span class="toggle"></span>&nbsp; Buzzer</p></div></section><section class="panel"><div class="section-head"><h2>⟳&nbsp; Factory Reset</h2></div><div class="section-body"><div class="notice" style="color:var(--danger);">⚠ This will erase all configuration including network settings, channel settings and user accounts.</div><button class="danger-btn" style="margin-top:16px;">⌫&nbsp; Reset to Factory Default</button></div></section></div><div class="stack"><section class="panel"><div class="section-head"><h2>▤&nbsp; Web Interface</h2></div><div class="section-body form-grid"><div class="field"><label>Language</label><select><option>English</option></select></div><div class="field"><label>Theme</label><select id="themeSelect"><option>Light</option><option>Dark</option></select></div><div class="field"><label>Session Timeout</label><input type="text" value="15" /></div><div class="field"><label>Refresh Interval</label><input type="text" value="5" /></div></div><div class="section-body"><p><span class="toggle on"></span>&nbsp; Show System Info</p><p><span class="toggle on"></span>&nbsp; Show Channel Preview</p></div></section><section class="panel"><div class="section-head"><h2>◉&nbsp; Reboot Device</h2></div><div class="section-body"><div class="notice">ⓘ&nbsp; The device will be temporarily unavailable during reboot.</div><button class="primary-btn" style="margin-top:16px;">⟳&nbsp; Reboot Now</button></div></section></div></div>
           </div>
-        </section>
+        </div>
 
-        <section class="card wide">
-          <div class="panel-header"><h3>Firmware Upload</h3><span class="chip">OTA</span></div>
-          <div class="panel-body stack">
-            <div class="row">
-              <input id="firmwareFile" type="file" accept=".bin,.img,.ota,.gz" />
-              <button id="uploadFirmwareBtn" class="primary">Upload Firmware</button>
-            </div>
-            <div class="field">
-              <label for="otaTarget">Target</label>
-              <input id="otaTarget" value="rp2354" />
-            </div>
-            <div class="row">
-              <label class="muted" for="otaVersion">Version</label>
-              <input id="otaVersion" value="1.4.2" />
-            </div>
-            <div class="progress">
-              <div class="progress-bar"><span id="firmwareProgressBar"></span></div>
-            </div>
-            <div id="firmwareStatus" class="log">Waiting for firmware package.</div>
-          </div>
-        </section>
+        <div class="footer-note">Design source: docs/ui. Embedded runtime uses sidebar tabs with separate page views.</div>
+        <!-- API hooks: /api/v1/led/control /api/v1/ota/upload -->
       </main>
     </div>
 
     <script>
-      const state = {
+      const demo = {
         device: {
-          name: 'Shelf-A1',
-          online: true,
-          mode: 'normal',
-          ip: '10.0.0.42',
-          ledHealth: 96,
-          activeChannels: 8,
-          totalChannels: 10,
-          totalLeds: 1380,
-          firmwareVersion: '1.4.2',
-          target: 'rp2354'
+          model: 'RP2354B',
+          firmware: 'v1.0.0',
+          ip: '172.17.0.102',
+          subnet: '255.255.252.0',
+          gateway: '172.17.3.254',
+          dns: '172.17.3.254',
+          mac: 'A4:CF:12:34:56:78',
+          uptime: 2 * 24 * 3600 + 14 * 3600 + 32 * 60,
+          network: 'up'
         },
         channels: [
-          { id: 1, name: 'C01', enabled: true, leds: 138, brightness: 180, load: 82, shelf: 'A-01', status: 'Healthy' },
-          { id: 2, name: 'C02', enabled: true, leds: 138, brightness: 180, load: 88, shelf: 'A-02', status: 'Healthy' },
-          { id: 3, name: 'C03', enabled: true, leds: 138, brightness: 180, load: 76, shelf: 'A-03', status: 'Healthy' },
-          { id: 4, name: 'C04', enabled: false, leds: 96, brightness: 140, load: 44, shelf: 'A-04', status: 'Standby' },
-          { id: 5, name: 'C05', enabled: true, leds: 138, brightness: 168, load: 83, shelf: 'B-01', status: 'Healthy' },
-          { id: 6, name: 'C06', enabled: true, leds: 138, brightness: 178, load: 90, shelf: 'B-02', status: 'Healthy' },
-          { id: 7, name: 'C07', enabled: true, leds: 138, brightness: 180, load: 73, shelf: 'B-03', status: 'Healthy' },
-          { id: 8, name: 'C08', enabled: true, leds: 138, brightness: 160, load: 68, shelf: 'B-04', status: 'Healthy' },
-          { id: 9, name: 'C09', enabled: true, leds: 138, brightness: 175, load: 71, shelf: 'C-01', status: 'Healthy' },
-          { id: 10, name: 'C10', enabled: false, leds: 120, brightness: 155, load: 42, shelf: 'C-02', status: 'Standby' }
-        ],
-        teams: [
-          { name: 'Team-1', color: 'RED', shelves: ['A-01', 'B-02'], active: true },
-          { name: 'Team-2', color: 'GREEN', shelves: ['A-03', 'B-03'], active: true },
-          { name: 'Team-3', color: 'BLUE', shelves: ['C-01'], active: false }
+          { id: 1, on: true }, { id: 2, on: false }, { id: 3, on: true }, { id: 4, on: false }, { id: 5, on: true },
+          { id: 6, on: true }, { id: 7, on: false }, { id: 8, on: true }, { id: 9, on: true }, { id: 10, on: false }
         ]
       };
 
-      function el(id) { return document.getElementById(id); }
-      function adminToken() {
-        let token = sessionStorage.getItem('rasterAdminToken');
-        if (!token) {
-          token = window.prompt('Enter the provisioned device administrator token:') || '';
-          if (token) sessionStorage.setItem('rasterAdminToken', token);
+      const pageMeta = {
+        dashboard: {
+          title: 'Dashboard',
+          subtitle: 'Overview of your RP2354B embedded system',
+          icon: '⌂'
+        },
+        network: {
+          title: 'Network Settings',
+          subtitle: 'Configure network interface and connectivity',
+          icon: '◎'
+        },
+        channels: {
+          title: 'Channel Management',
+          subtitle: 'Control LED channels, set colors and manage output',
+          icon: '▦'
+        },
+        ota: {
+          title: 'OTA Update',
+          subtitle: 'Update firmware and manage system images',
+          icon: '☁'
+        },
+        settings: {
+          title: 'Settings',
+          subtitle: 'Configure system preferences and device options',
+          icon: '⚙'
         }
-        return token;
-      }
-      function adminHeaders(extra = {}) {
-        const token = adminToken();
-        return { ...extra, ...(token ? { Authorization: `Bearer ${token}` } : {}) };
-      }
-      function escapeHtml(value) {
-        return String(value)
-          .replaceAll('&', '&amp;')
-          .replaceAll('<', '&lt;')
-          .replaceAll('>', '&gt;')
-          .replaceAll('"', '&quot;')
-          .replaceAll("'", '&#39;');
-      }
+      };
 
-      function renderDeviceSnapshot() {
-        const container = el('deviceSnapshot');
-        const items = [
-          ['Board', 'RP2354B'],
-          ['Ethernet', state.device.online ? 'W5500 OK' : 'Offline'],
-          ['Firmware', state.device.firmwareVersion],
-          ['Target', state.device.target],
-          ['Mode', state.device.mode],
-          ['LED health', `${state.device.ledHealth}%`],
-        ];
-        container.innerHTML = items.map(([label, value]) => `
-          <div class="keyval">
-            <div class="label">${escapeHtml(label)}</div>
-            <div class="value">${escapeHtml(value)}</div>
-          </div>
-        `).join('');
-      }
-
-      function renderChannelGrid() {
-        const grid = el('channelGrid');
-        grid.innerHTML = state.channels.map((channel) => `
-          <div class="channel ${channel.enabled ? 'on' : ''}" data-id="${channel.id}">
-            <div class="channel-head">
-              <span class="channel-name">${escapeHtml(channel.name)}</span>
-              <span class="toggle" title="${channel.enabled ? 'Enabled' : 'Disabled'}"></span>
-            </div>
-            <div class="channel-body">
-              <div class="mini-metric"><span>LEDs</span><strong>${channel.leds}</strong></div>
-              <div class="mini-metric"><span>Shelf</span><strong>${escapeHtml(channel.shelf)}</strong></div>
-              <div class="mini-metric"><span>Status</span><strong>${escapeHtml(channel.status)}</strong></div>
-              <div class="bar"><span style="width:${Math.min(100, Math.max(0, Number(channel.load) || 0))}%"></span></div>
-            </div>
-          </div>
-        `).join('');
-
-        grid.querySelectorAll('.channel').forEach((node) => {
-          node.addEventListener('click', () => {
-            const id = Number(node.dataset.id);
-            const channel = state.channels.find((item) => item.id === id);
-            if (!channel) return;
-            channel.enabled = !channel.enabled;
-            channel.status = channel.enabled ? 'Healthy' : 'Standby';
-            render();
-          });
+      const el = (id) => document.getElementById(id);
+      const channelPalette = ['#22c55e', '#ef4444', '#2563eb', '#f59e0b', '#a855f7', '#06b6d4', '#fb7185', '#f97316', '#f43f5e', '#16a34a'];
+      let channelDraft = demo.channels.map((channel, index) => ({
+        ...channel,
+        name: `Channel ${index + 1}`,
+        color: channelPalette[index],
+        brightness: channel.on ? 80 : 50
+      }));
+      let toastTimer;
+      const notify = (message, isError = false) => {
+        const toast = el('toast');
+        toast.textContent = message;
+        toast.classList.toggle('error', isError);
+        toast.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove('show'), 3600);
+      };
+      const requestJson = async (path, options = {}) => {
+        const token = localStorage.getItem('raster-ui-access-token');
+        const response = await fetch(path, {
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            ...(options.headers || {})
+          },
+          ...options
         });
-      }
-
-      function renderTeams() {
-        const container = el('teamDetails');
-        const rows = state.teams.map((team) => `
-          <div class="keyval">
-            <div class="label">${escapeHtml(team.name)}</div>
-            <div class="value">${escapeHtml(team.color)} · ${escapeHtml(team.shelves.join(', '))}</div>
-          </div>
-        `).join('');
-        container.innerHTML = rows || '<div class="muted">No teams configured</div>';
-        el('teamCountChip').textContent = `${state.teams.length} Teams`;
-      }
-
-      function renderConfigSelectors() {
-        const select = el('channelSelect');
-        select.innerHTML = state.channels.map((channel) => `<option value="${Number(channel.id)}">${escapeHtml(channel.name)}</option>`).join('');
-        const first = state.channels[0];
-        if (first) {
-          el('ledCount').value = first.leds;
-          el('brightness').value = first.brightness;
-          el('stripLength').value = 6;
+        const payload = await response.json().catch(() => null);
+        if (!response.ok || (payload && payload.success === false)) {
+          throw new Error((payload && payload.error && payload.error.message) || 'Device rejected the request.');
         }
-      }
-
-      function render() {
-        el('deviceOnlineText').textContent = state.device.online ? 'System Online' : 'Offline';
-        el('deviceModeChip').textContent = state.device.mode.toUpperCase();
-        el('deviceNameValue').textContent = state.device.name;
-        el('deviceAddressValue').textContent = state.device.ip;
-        el('activeChannelsValue').textContent = String(state.channels.filter((x) => x.enabled).length);
-        el('ledHealthValue').textContent = `${state.device.ledHealth}%`;
-        el('teamZoneValue').textContent = String(state.teams.length);
-        renderDeviceSnapshot();
-        renderChannelGrid();
-        renderTeams();
-        renderConfigSelectors();
-      }
-
-      el('applyChannelConfig').addEventListener('click', async () => {
-        const id = Number(el('channelSelect').value);
-        const channel = state.channels.find((item) => item.id === id);
-        if (!channel) return;
-        const update = {
-          channel: `C${String(id).padStart(2, '0')}`,
-          led_count: Number(el('ledCount').value),
-          brightness: Number(el('brightness').value),
-          leds_per_shelf: Number(el('stripLength').value)
-        };
-        const response = await fetch('/api/v1/config', {
-          method: 'PUT',
-          headers: adminHeaders({ 'Content-Type': 'application/json' }),
-          body: JSON.stringify(update)
+        return payload;
+      };
+      const formatUptime = (seconds) => {
+        const days = Math.floor(seconds / 86400);
+        const hours = Math.floor((seconds % 86400) / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        return `${days}d ${hours}h ${minutes}m`;
+      };
+      const setActivePage = (pageName) => {
+        const nextPage = pageMeta[pageName] ? pageName : 'dashboard';
+        document.querySelectorAll('.page').forEach((page) => {
+          page.classList.toggle('active', page.dataset.page === nextPage);
         });
-        el('firmwareStatus').textContent = await response.text();
-        if (response.ok) {
-          channel.leds = update.led_count;
-          channel.brightness = update.brightness;
-          render();
+        document.querySelectorAll('.nav a').forEach((link) => {
+          link.classList.toggle('active', link.getAttribute('href') === `#${nextPage}`);
+        });
+        el('pageTitle').textContent = pageMeta[nextPage].title;
+        el('pageSubtitle').textContent = pageMeta[nextPage].subtitle;
+        el('pageIcon').textContent = pageMeta[nextPage].icon;
+      };
+      const setSidebarCollapsed = (collapsed) => {
+        document.body.classList.toggle('sidebar-collapsed', collapsed);
+        localStorage.setItem('raster-ui-sidebar-collapsed', collapsed ? '1' : '0');
+      };
+      const setSidebarOpen = (open) => {
+        document.body.classList.toggle('nav-open', open);
+      };
+      const syncPageFromHash = () => {
+        const current = window.location.hash ? window.location.hash.slice(1) : 'dashboard';
+        setActivePage(current);
+        if (window.matchMedia('(max-width: 1180px)').matches) {
+          setSidebarOpen(false);
         }
-      });
+      };
 
-      el('applyNetworkConfig').addEventListener('click', async () => {
-        const update = {
-          dhcp: el('networkMode').value === 'dhcp' ? 'true' : 'false',
-          ip: el('staticIp').value
-        };
-        const response = await fetch('/api/v1/config', {
-          method: 'PUT',
-          headers: adminHeaders({ 'Content-Type': 'application/json' }),
-          body: JSON.stringify(update)
-        });
-        el('firmwareStatus').textContent = await response.text();
-      });
+      const updateClock = () => {
+        const now = new Date();
+        const time = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' });
+        const date = now.toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' });
+        el('headerClock').firstChild.textContent = time;
+        el('headerDate').textContent = date;
+        el('systemTime').textContent = time;
+        el('systemDate').textContent = date;
+      };
 
-      el('loadSampleJson').addEventListener('click', () => {
-        el('jsonPayload').value = `{
-  "channel": "C03",
-  "status": "on",
-  "led_list": [
-    {"led_no": 6, "ledcolor": "GREEN", "team_id": "2"},
-    {"led_no": 7, "ledcolor": "GREEN", "team_id": "2"},
-    {"led_no": 8, "ledcolor": "GREEN", "team_id": "2"}
-  ]
-}`;
-      });
+      const renderChannels = (channels) => {
+        channelDraft = channels.map((channel, index) => ({
+          ...channelDraft[index],
+          ...channel,
+          name: channelDraft[index] ? channelDraft[index].name : `Channel ${index + 1}`,
+          color: channelDraft[index] ? channelDraft[index].color : channelPalette[index],
+          brightness: channelDraft[index] ? channelDraft[index].brightness : channel.on ? 80 : 50,
+          ledCount: Number(channel.ledCount || channel.led_count || 138)
+        }));
+        el('channelGrid').innerHTML = channelDraft.map((channel, index) => `
+          <tr>
+            <td>${String(index + 1)}</td>
+            <td><input type="text" data-channel-field="name" data-index="${index}" value="${channel.name}" /></td>
+            <td><button class="toggle ${channel.on ? 'on' : ''}" data-action="channel-toggle" data-index="${index}" aria-label="Toggle channel ${index + 1}"></button>&nbsp; ${channel.on ? 'ON' : 'OFF'}</td>
+            <td><input type="color" data-channel-field="color" data-index="${index}" value="${channel.color}" aria-label="Channel ${index + 1} color" /> <span>${channel.color.toUpperCase()}</span></td>
+            <td><input type="range" data-channel-field="brightness" data-index="${index}" min="0" max="100" value="${channel.brightness}" /> <span>${channel.brightness}%</span></td>
+            <td><button class="outline-btn" data-action="channel-test" data-index="${index}">▷ Test</button></td>
+            <td><button class="outline-btn icon-btn" data-action="channel-copy" data-index="${index}" aria-label="Duplicate channel ${index + 1}" title="Duplicate channel">□</button>&nbsp;<button class="outline-btn icon-btn" data-action="channel-reset" data-index="${index}" style="color:var(--danger);" aria-label="Reset channel ${index + 1}" title="Reset channel">⌫</button></td>
+          </tr>
+        `).join('');
+      };
 
-      el('sendJson').addEventListener('click', async () => {
-        const text = el('jsonPayload').value;
+      const pauseForHttpListener = () => new Promise((resolve) => setTimeout(resolve, 50));
+      const fetchDashboardJson = async (path) => {
+        const response = await fetch(path);
+        const payload = response.ok ? await response.json() : null;
+        await pauseForHttpListener();
+        return payload;
+      };
+      const applyApiState = async () => {
         try {
-          const payload = JSON.parse(text);
-          const res = await fetch('/api/v1/led/control', {
-            method: 'POST',
-            headers: adminHeaders({ 'Content-Type': 'application/json' }),
-            body: JSON.stringify(payload)
-          });
-          if (!res.ok) throw new Error('HTTP ' + res.status);
-          const body = await res.text();
-          el('firmwareStatus').textContent = `JSON accepted: ${body || 'OK'}`;
-        } catch (error) {
-          el('firmwareStatus').textContent = `JSON upload failed: ${error.message}
-The device rejected or could not process the command.`;
-        }
-      });
+          const device = await fetchDashboardJson('/api/v1/device/info');
+          const config = await fetchDashboardJson('/api/v1/config');
+          const channels = await fetchDashboardJson('/api/v1/channels');
 
-      const firmwareProgressBar = el('firmwareProgressBar');
-      el('uploadFirmwareBtn').addEventListener('click', () => {
-        const fileInput = el('firmwareFile');
-        const file = fileInput.files[0];
-        if (!file) {
-          el('firmwareStatus').textContent = 'No firmware file selected.';
-          return;
-        }
-
-        const metadata = {
-          target: el('otaTarget').value,
-          version: el('otaVersion').value,
-          length: file.size,
-          sha256: 'offline-placeholder-sha256'
-        };
-        const form = new FormData();
-        form.append('file', file);
-        form.append('target', metadata.target);
-        form.append('version', metadata.version);
-        form.append('length', String(metadata.length));
-        form.append('digest', metadata.sha256);
-
-        const xhr = new XMLHttpRequest();
-        xhr.open('POST', '/api/v1/ota/upload');
-        const token = adminToken();
-        if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-        xhr.upload.onprogress = (event) => {
-          if (event.lengthComputable) {
-            const pct = Math.round((event.loaded / event.total) * 100);
-            firmwareProgressBar.style.width = `${pct}%`;
-            el('firmwareStatus').textContent = `Uploading ${file.name} (${pct}%)
-Metadata: ${JSON.stringify(metadata, null, 2)}`;
+          if (device && device.success) {
+            el('deviceFirmware').textContent = device.firmware_version || demo.device.firmware;
+            el('deviceIp').textContent = device.ip_address || demo.device.ip;
+            el('deviceUptime').textContent = formatUptime(Number(device.uptime_seconds || demo.device.uptime));
+            el('systemStatus').textContent = device.network_status === 'up' ? 'System Running' : 'Network Offline';
           }
-        };
-
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            firmwareProgressBar.style.width = '100%';
-            el('firmwareStatus').textContent = `Upload complete.
-Target: ${metadata.target}
-Version: ${metadata.version}
-OTAPackage: ${xhr.responseText || 'accepted'}`;
+          if (config && config.success) {
+            el('deviceNameField').value = config.device_name || 'raster-pick-to-light';
+            el('networkMode').value = config.dhcp ? 'DHCP' : 'Static';
+            el('staticIpField').value = config.ip || demo.device.ip;
+            el('subnetField').value = config.subnet || demo.device.subnet;
+            el('gatewayField').value = config.gateway || demo.device.gateway;
+            el('dnsField').value = config.dns || demo.device.dns;
+            el('deviceSubnet').textContent = config.subnet || demo.device.subnet;
+            el('deviceGateway').textContent = config.gateway || demo.device.gateway;
+            el('deviceDns').textContent = config.dns || demo.device.dns;
+            el('networkIp').textContent = config.ip || demo.device.ip;
+            el('networkSubnet').textContent = config.subnet || demo.device.subnet;
+            el('networkGateway').textContent = config.gateway || demo.device.gateway;
+            el('networkDns').textContent = config.dns || demo.device.dns;
+          }
+          if (channels && channels.success && Array.isArray(channels.channels)) {
+            el('receiveConsole').textContent = JSON.stringify(channels.channels, null, 2);
+            el('receiveConsoleStatus').textContent = `Updated ${new Date().toLocaleTimeString()}`;
+            renderChannels(channels.channels.map((channel) => ({
+              on: channel.status === 'on',
+              ledCount: Number(channel.led_count || 138)
+            })));
           } else {
-            firmwareProgressBar.style.width = '0%';
-            el('firmwareStatus').textContent = `Upload failed: ${xhr.status} ${xhr.responseText || 'no response'}`;
+            renderChannels(demo.channels);
           }
-        };
+        } catch (error) {
+          renderChannels(demo.channels);
+        }
+      };
 
-        xhr.onerror = () => {
-          firmwareProgressBar.style.width = '0%';
-          el('firmwareStatus').textContent = 'Upload failed: network/endpoint unreachable. Offline dashboard remains available for local testing.';
-        };
-
-        xhr.send(form);
+      const setTheme = (nextTheme) => {
+        document.documentElement.dataset.theme = nextTheme;
+        el('themeSelect').value = nextTheme === 'dark' ? 'Dark' : 'Light';
+        el('themeLight').classList.toggle('active', nextTheme === 'light');
+        el('themeToggle').classList.toggle('active', nextTheme === 'dark');
+        localStorage.setItem('raster-ui-theme', nextTheme);
+      };
+      el('themeToggle').addEventListener('click', () => setTheme('dark'));
+      el('themeLight').addEventListener('click', () => setTheme('light'));
+      el('accessTokenButton').addEventListener('click', () => {
+        const current = localStorage.getItem('raster-ui-access-token') || '';
+        const token = window.prompt('Enter the device bearer token. Leave blank to clear it.', current);
+        if (token === null) return;
+        if (token.trim()) {
+          localStorage.setItem('raster-ui-access-token', token.trim());
+          notify('Access token saved in this browser.');
+        } else {
+          localStorage.removeItem('raster-ui-access-token');
+          notify('Access token cleared.');
+        }
       });
 
-      render();
+      el('themeSelect').addEventListener('change', () => {
+        const nextTheme = el('themeSelect').value === 'Dark' ? 'dark' : 'light';
+        setTheme(nextTheme);
+      });
+
+      const savedTheme = localStorage.getItem('raster-ui-theme');
+      if (savedTheme === 'dark') {
+        setTheme('dark');
+      } else {
+        setTheme('light');
+      }
+      const savedCollapsed = localStorage.getItem('raster-ui-sidebar-collapsed');
+      setSidebarCollapsed(savedCollapsed === '1');
+
+      el('sidebarToggle').addEventListener('click', () => {
+        if (window.matchMedia('(max-width: 1180px)').matches) {
+          setSidebarOpen(!document.body.classList.contains('nav-open'));
+        } else {
+          setSidebarCollapsed(!document.body.classList.contains('sidebar-collapsed'));
+        }
+      });
+      el('sidebarBackdrop').addEventListener('click', () => setSidebarOpen(false));
+      document.querySelectorAll('.nav a').forEach((link) => {
+        link.addEventListener('click', () => {
+          if (window.matchMedia('(max-width: 1180px)').matches) {
+            setSidebarOpen(false);
+          }
+        });
+      });
+
+      const setNetworkMode = (dhcp) => {
+        el('networkMode').value = dhcp ? 'DHCP' : 'Static';
+        ['staticIpField', 'subnetField', 'gatewayField', 'dnsField'].forEach((id) => {
+          el(id).disabled = dhcp;
+        });
+        el('networkNotice').textContent = dhcp
+          ? 'ⓘ Using DHCP. Network parameters are assigned automatically.'
+          : 'ⓘ Static mode is active. Enter and save the required network values.';
+      };
+      const readNetworkConfig = () => ({
+        device_name: el('deviceNameField').value.trim(),
+        dhcp: el('networkMode').value === 'DHCP',
+        ip: el('staticIpField').value.trim(),
+        subnet: el('subnetField').value.trim(),
+        gateway: el('gatewayField').value.trim(),
+        dns: el('dnsField').value.trim()
+      });
+      const applyChannelDraft = async () => {
+        const updates = channelDraft.map((channel, index) => requestJson('/api/v1/led/control', {
+          method: 'POST',
+          body: JSON.stringify({
+            channel: `C${String(index + 1).padStart(2, '0')}`,
+            status: channel.on ? 'on' : 'off',
+            led_list: [{ led_no: 1, ledcolor: channel.color, team_id: channel.name }]
+          })
+        }));
+        await Promise.all(updates);
+      };
+      document.addEventListener('input', (event) => {
+        const field = event.target.dataset.channelField;
+        if (!field) return;
+        const index = Number(event.target.dataset.index);
+        channelDraft[index][field] = field === 'brightness' ? Number(event.target.value) : event.target.value;
+      });
+      document.addEventListener('click', async (event) => {
+        const button = event.target.closest('button');
+        if (!button) return;
+        const action = button.dataset.action;
+        const inOta = button.closest('[data-page="ota"]');
+        const inSettings = button.closest('[data-page="settings"]');
+        try {
+          if (action === 'network-dhcp') return setNetworkMode(true);
+          if (action === 'network-static') return setNetworkMode(false);
+          if (action === 'save-config') {
+            await requestJson('/api/v1/config', { method: 'PUT', body: JSON.stringify(readNetworkConfig()) });
+            notify('Network settings saved to the device.');
+            return applyApiState();
+          }
+          if (action === 'refresh-config') {
+            await applyApiState();
+            notify('Network configuration refreshed.');
+            return;
+          }
+          if (action === 'ping') {
+            const target = el('pingTarget').value.trim();
+            notify(target ? `Ping request queued for ${target}.` : 'Enter an IP address to run a ping test.', !target);
+            return;
+          }
+          if (action === 'scan-network') return notify('Network scan is not available on the embedded target.');
+          if (action === 'channels-on' || action === 'channels-off') {
+            channelDraft.forEach((channel) => { channel.on = action === 'channels-on'; });
+            renderChannels(channelDraft);
+            if (action === 'channels-off') await requestJson('/api/v1/channels/all/off', { method: 'POST' });
+            notify(action === 'channels-on' ? 'All channel drafts are on. Apply changes to send them.' : 'All channels were turned off.');
+            return;
+          }
+          if (action === 'channels-apply') {
+            await applyChannelDraft();
+            notify('Channel changes were applied.');
+            return applyApiState();
+          }
+          if (action === 'channel-toggle') {
+            const index = Number(button.dataset.index);
+            channelDraft[index].on = !channelDraft[index].on;
+            renderChannels(channelDraft);
+            return;
+          }
+          if (action === 'channel-test') {
+            const index = Number(button.dataset.index);
+            const channel = channelDraft[index];
+            button.disabled = true;
+            button.textContent = 'Testing...';
+            try {
+              const previewLedCount = Math.min(channel.ledCount || 138, 6);
+              const leds = Array.from({ length: previewLedCount }, (_, ledIndex) =>
+                `${ledIndex + 1}:${channel.color}`).join('|');
+              await requestJson('/api/v1/led/control', {
+                method: 'POST',
+                body: JSON.stringify({
+                  channel: `C${String(index + 1).padStart(2, '0')}`,
+                  status: 'on',
+                  leds
+                })
+              });
+              notify(`Previewing LEDs 1-${previewLedCount} on Channel ${index + 1} in ${channel.color.toUpperCase()}.`);
+              return applyApiState();
+            } finally {
+              button.textContent = '▷ Test';
+              button.disabled = false;
+            }
+          }
+          if (action === 'channel-copy') {
+            const index = Number(button.dataset.index);
+            const nextIndex = (index + 1) % channelDraft.length;
+            channelDraft[nextIndex] = { ...channelDraft[index], name: `Channel ${nextIndex + 1}` };
+            renderChannels(channelDraft);
+            return notify(`Copied Channel ${index + 1} settings to Channel ${nextIndex + 1}.`);
+          }
+          if (action === 'channel-reset') {
+            const index = Number(button.dataset.index);
+            channelDraft[index] = { ...demo.channels[index], name: `Channel ${index + 1}`, color: channelPalette[index], brightness: 50 };
+            renderChannels(channelDraft);
+            return notify(`Channel ${index + 1} reset to defaults.`);
+          }
+          if (button.closest('.settings-tabs')) {
+            button.closest('.settings-tabs').querySelectorAll('button').forEach((tab) => tab.classList.toggle('active', tab === button));
+            return notify(`${button.textContent.trim()} settings selected.`);
+          }
+          if (inOta && button.textContent.includes('Choose File')) return inOta.querySelector('input[type="file"]').click();
+          if (inOta && button.textContent.includes('Start OTA Update')) {
+            const file = inOta.querySelector('input[type="file"]').files[0];
+            if (!file) return notify('Choose a .uf2 file before starting the update.', true);
+            const data = new FormData();
+            data.append('firmware', file);
+            await fetch('/api/v1/ota/upload', { method: 'POST', body: data });
+            return notify('Firmware upload started.');
+          }
+          if (inSettings && button.textContent.includes('Reset to Factory Default')) {
+            if (window.confirm('Reset all local dashboard preferences?')) {
+              localStorage.removeItem('raster-ui-theme');
+              localStorage.removeItem('raster-ui-sidebar-collapsed');
+              notify('Local dashboard preferences were reset.');
+            }
+            return;
+          }
+          if (inSettings && button.textContent.includes('Reboot Now')) return notify('Reboot requires a device management backend.');
+          if (button.id === 'logoutButton') return notify('Logout is not configured for this embedded dashboard.');
+        } catch (error) {
+          notify(error.message || 'The device request failed.', true);
+        }
+      });
+      document.querySelectorAll('.toggle').forEach((toggle) => {
+        toggle.addEventListener('click', () => toggle.classList.toggle('on'));
+      });
+      document.querySelector('[data-page="ota"] input[type="file"]').addEventListener('change', (event) => {
+        const file = event.target.files[0];
+        if (file) notify(`${file.name} is ready for upload.`);
+      });
+      el('networkMode').addEventListener('change', () => setNetworkMode(el('networkMode').value === 'DHCP'));
+
+      updateClock();
+      syncPageFromHash();
+      window.addEventListener('hashchange', syncPageFromHash);
+      window.matchMedia('(max-width: 1180px)').addEventListener('change', (event) => {
+        if (!event.matches) {
+          setSidebarOpen(false);
+        }
+      });
+      setInterval(updateClock, 1000);
+      renderChannels(demo.channels);
+      setNetworkMode(el('networkMode').value === 'DHCP');
+      applyApiState();
+      setInterval(applyApiState, 5000);
     </script>
   </body>
 </html>

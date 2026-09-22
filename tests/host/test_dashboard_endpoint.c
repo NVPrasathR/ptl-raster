@@ -7,7 +7,7 @@
 int main(void) {
     pharmacy_protocol_context_t ctx;
     http_request_t request;
-    char payload[32768];
+    char payload[HTTP_SERVER_RESPONSE_CAPACITY];
     int status = 0;
 
     pharmacy_protocol_init(&ctx);

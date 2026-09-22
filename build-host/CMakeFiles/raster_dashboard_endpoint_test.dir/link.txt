@@ -1,0 +1,1 @@
+/usr/bin/cc  -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/raster_dashboard_endpoint_test.dir/test_dashboard_endpoint.c.o -o raster_dashboard_endpoint_test  libraster_firmware_host.a

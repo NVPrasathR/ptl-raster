@@ -132,7 +132,7 @@ int http_server_route_request(pharmacy_protocol_context_t *ctx,
                              size_t response_cap,
                              int *http_status_out) {
     int http_status = 500;
-    char payload[PHARMACY_JSON_RESPONSE_CAPACITY];
+    static char payload[PHARMACY_JSON_RESPONSE_CAPACITY];
     if (ctx == NULL || request == NULL || response == NULL || response_cap == 0U) {
         return -1;
     }
@@ -160,6 +160,15 @@ int http_server_route_request(pharmacy_protocol_context_t *ctx,
         ctx->request_authorized =
             ctx->authorize != NULL &&
             ctx->authorize(ctx->authorize_context, request->authorization);
+        if (!ctx->request_authorized && ctx->allow_unprovisioned_led_control &&
+            strcmp(request->method, "POST") == 0 &&
+            (strcmp(request->path, "/api/v1/led/control") == 0 ||
+             strcmp(request->path, "/api/v1/picklight/ledcontrol") == 0 ||
+             strcmp(request->path, "/api/v1/channels/all/off") == 0 ||
+             (strncmp(request->path, "/api/v1/channels/", strlen("/api/v1/channels/")) == 0 &&
+              strstr(request->path, "/off") != NULL))) {
+            ctx->request_authorized = true;
+        }
         http_status = pharmacy_protocol_handle_request(ctx,
                                                      request->method,
                                                      request->path,

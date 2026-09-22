@@ -1,0 +1,71 @@
+Start testing: Sep 22 16:13 IST
+----------------------------------------------------------
+1/3 Testing: raster_host_unit_tests
+1/3 Test: raster_host_unit_tests
+Command: "/Users/narayanavishnuprasathr/copilot-worktrees/ptl-raster/nvprasathr-symmetrical-bassoon/build-host/raster_host_unit_tests"
+Directory: /Users/narayanavishnuprasathr/copilot-worktrees/ptl-raster/nvprasathr-symmetrical-bassoon/build-host
+"raster_host_unit_tests" start time: Sep 22 16:13 IST
+Output:
+----------------------------------------------------------
+RUN color parsing and custom RGB
+PASS color parsing and custom RGB
+RUN channel IDs, LED bounds, configurable counts
+PASS channel IDs, LED bounds, configurable counts
+RUN shelf partial grouping
+PASS shelf partial grouping
+RUN strict JSON, legacy parsing, precedence, atomic failure, status off
+PASS strict JSON, legacy parsing, precedence, atomic failure, status off
+RUN HTTP parsing, routing, status, bounds
+PASS HTTP parsing, routing, status, bounds
+RUN configuration validation, two-slot persistence, CRC, recovery
+PASS configuration validation, two-slot persistence, CRC, recovery
+RUN W5500 DHCP, static, recovery state
+PASS W5500 DHCP, static, recovery state
+RUN protocol network sync uses live IP
+PASS protocol network sync uses live IP
+RUN external pick-light compatibility routes
+PASS external pick-light compatibility routes
+RUN OTA digest, metadata, state, auth, failure paths
+PASS OTA digest, metadata, state, auth, failure paths
+RUN dashboard assets present
+PASS dashboard assets present
+PASS all 11 host test groups
+<end of output>
+Test time =   0.01 sec
+----------------------------------------------------------
+Test Passed.
+"raster_host_unit_tests" end time: Sep 22 16:13 IST
+"raster_host_unit_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+2/3 Testing: raster_dashboard_endpoint_test
+2/3 Test: raster_dashboard_endpoint_test
+Command: "/Users/narayanavishnuprasathr/copilot-worktrees/ptl-raster/nvprasathr-symmetrical-bassoon/build-host/raster_dashboard_endpoint_test"
+Directory: /Users/narayanavishnuprasathr/copilot-worktrees/ptl-raster/nvprasathr-symmetrical-bassoon/build-host
+"raster_dashboard_endpoint_test" start time: Sep 22 16:13 IST
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"raster_dashboard_endpoint_test" end time: Sep 22 16:13 IST
+"raster_dashboard_endpoint_test" time elapsed: 00:00:00
+----------------------------------------------------------
+
+3/3 Testing: raster_legacy_leds_test
+3/3 Test: raster_legacy_leds_test
+Command: "/Users/narayanavishnuprasathr/copilot-worktrees/ptl-raster/nvprasathr-symmetrical-bassoon/build-host/raster_legacy_leds_test"
+Directory: /Users/narayanavishnuprasathr/copilot-worktrees/ptl-raster/nvprasathr-symmetrical-bassoon/build-host
+"raster_legacy_leds_test" start time: Sep 22 16:13 IST
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"raster_legacy_leds_test" end time: Sep 22 16:13 IST
+"raster_legacy_leds_test" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Sep 22 16:13 IST

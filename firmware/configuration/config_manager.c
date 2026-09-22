@@ -50,11 +50,11 @@ void raster_config_defaults(raster_config_t *config) {
 
     memset(config, 0, sizeof(*config));
     config->version = RASTER_CONFIG_VERSION;
-    config->network.dhcp_enabled = true;
-    config->network.address = (raster_ipv4_t){{192u, 168u, 1u, 250u}};
-    config->network.netmask = (raster_ipv4_t){{255u, 255u, 255u, 0u}};
-    config->network.gateway = (raster_ipv4_t){{192u, 168u, 1u, 1u}};
-    config->network.dns = (raster_ipv4_t){{192u, 168u, 1u, 1u}};
+    config->network.dhcp_enabled = false;
+    config->network.address = (raster_ipv4_t){{172u, 17u, 0u, 102u}};
+    config->network.netmask = (raster_ipv4_t){{255u, 255u, 252u, 0u}};
+    config->network.gateway = (raster_ipv4_t){{172u, 17u, 3u, 254u}};
+    config->network.dns = (raster_ipv4_t){{172u, 17u, 3u, 254u}};
     config->network.http_port = 80u;
     memcpy(config->network.device_name, "raster-pick-to-light",
            sizeof("raster-pick-to-light"));

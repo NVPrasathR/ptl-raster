@@ -26,6 +26,17 @@ static raster_config_t device_config;
 static w5500_eth_context_t ethernet;
 static pharmacy_protocol_context_t protocol;
 
+static int handle_data_server_payload(const char *data, size_t data_length,
+                                      void *context) {
+    pharmacy_protocol_context_t *protocol_context =
+        (pharmacy_protocol_context_t *)context;
+    printf("\r\n[DATA SERVER RX] %u bytes\r\n", (unsigned int)data_length);
+    (void)fwrite(data, 1u, data_length, stdout);
+    printf("\r\n[DATA SERVER RX END]\r\n");
+    return pharmacy_protocol_apply_server_data(protocol_context, data,
+                                               data_length);
+}
+
 static bool authorize_admin(void *context, const char *credential) {
     const raster_config_t *config = (const raster_config_t *)context;
     static const char bearer[] = "Bearer ";
@@ -63,6 +74,51 @@ static bool string_to_ipv4(const char *text, raster_ipv4_t *address) {
         address->octet[index] = (uint8_t)octets[index];
     }
     return true;
+}
+
+static uint32_t ipv4_string_to_oled_value(const char *text) {
+    raster_ipv4_t address;
+    if (!string_to_ipv4(text, &address)) {
+        return 0u;
+    }
+    return ((uint32_t)address.octet[0] << 24u) |
+           ((uint32_t)address.octet[1] << 16u) |
+           ((uint32_t)address.octet[2] << 8u) |
+           (uint32_t)address.octet[3];
+}
+
+static void sync_oled_network(const w5500_eth_context_t *ctx) {
+    if (ctx == NULL) {
+        return;
+    }
+
+    oled_manager_set_network_diagnostic((uint8_t)ctx->state, 0u);
+    switch (ctx->state) {
+        case W5500_NET_STATE_DHCP_WAIT:
+            oled_manager_set_network_state(OLED_NETWORK_DHCP);
+            oled_manager_set_network_detail("DHCP...");
+            oled_manager_set_ip(0u);
+            break;
+        case W5500_NET_STATE_DHCP_READY:
+        case W5500_NET_STATE_STATIC_READY:
+            oled_manager_set_network_state(OLED_NETWORK_CONNECTED);
+            oled_manager_set_network_detail(ctx->dhcp_enabled ? "DHCP OK" : "STATIC");
+            oled_manager_set_ip(ipv4_string_to_oled_value(ctx->ip));
+            break;
+        case W5500_NET_STATE_RECOVERY:
+            oled_manager_set_network_state(OLED_NETWORK_DISCONNECTED);
+            oled_manager_set_network_detail("RECOVERY");
+            oled_manager_set_ip(0u);
+            break;
+        case W5500_NET_STATE_INIT:
+        case W5500_NET_STATE_LINK_WAIT:
+        default:
+            oled_manager_set_network_state(ctx->link_up ? OLED_NETWORK_UNKNOWN
+                                                        : OLED_NETWORK_DISCONNECTED);
+            oled_manager_set_network_detail(ctx->link_up ? "STARTING" : "NO LINK");
+            oled_manager_set_ip(0u);
+            break;
+    }
 }
 
 static bool commit_led_state(void *context, size_t channel,
@@ -208,6 +264,7 @@ static void apply_configuration(void) {
     w5500_eth_init(&ethernet, device_config.network.mac,
                    device_config.network.dhcp_enabled, ip, subnet, gateway, dns,
                    device_config.network.device_name, device_config.network.http_port);
+    sync_oled_network(&ethernet);
     pharmacy_protocol_init(&protocol);
     for (uint8_t channel = 0; channel < RASTER_CHANNEL_COUNT; ++channel) {
         protocol.channels[channel].led_count =
@@ -216,6 +273,7 @@ static void apply_configuration(void) {
             device_config.channels[channel].enabled;
     }
     pharmacy_protocol_set_authorizer(&protocol, authorize_admin, &device_config);
+    protocol.allow_unprovisioned_led_control = !device_config.admin_credential_provisioned;
     pharmacy_protocol_set_committers(&protocol, commit_led_state, NULL,
                                      commit_network_config, NULL,
                                      commit_channel_config, NULL);
@@ -248,10 +306,13 @@ int main(void) {
             }
             buzzer_service(now_ms);
             status_led_service(now_ms);
-            oled_manager_service();
             channel_manager_service();
             bool link_up = w5500_hw_link_up();
             w5500_eth_update(&ethernet, now_ms, link_up);
+            pharmacy_protocol_sync_network(&protocol, ethernet.ip,
+                                          w5500_eth_is_ready(&ethernet),
+                                          ethernet.dhcp_enabled);
+            sync_oled_network(&ethernet);
             if (link_up != previous_link) {
                 if (link_up) {
                     status_led_set(true);
@@ -262,7 +323,10 @@ int main(void) {
             }
             if (link_up) {
                 w5500_http_service(&ethernet, handle_http_request, NULL);
+                w5500_data_server_service(&ethernet,
+                                          handle_data_server_payload, &protocol);
             }
+            oled_manager_service();
             watchdog_update();
         }
 

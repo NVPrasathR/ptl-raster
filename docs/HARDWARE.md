@@ -31,6 +31,7 @@ The product brief references `RP2354B`, but the Pico SDK naming is still `rp2350
 - Board-specific flash type or density
 - Electrical and schematic correctness of the product-specified map in `firmware/board_pins.h`
 - Final Ethernet, OLED, buzzer, and LED-chain wiring assignments
+- Measured DHCP lease and renewal behavior on the final switch/router topology
 
 ## Power and signal integrity
 
@@ -45,3 +46,9 @@ order from the purchased component datasheet.
 - Raspberry Pi Pico SDK local headers (above)
 - https://datasheets.raspberrypi.com/rp2350/rp2350-datasheet.pdf
 - https://datasheets.raspberrypi.com/rp2354/rp2354b-datasheet.pdf
+
+## W5500 DHCP software evidence
+The firmware now vendors the minimal WIZnet ioLibrary W5500/DHCP sources under
+`third_party/wiznet/` and uses them on-device for hardware DHCP negotiation. This
+proves build-time integration of a real DHCP client, but not successful leasing on the
+final custom hardware without physical network testing.

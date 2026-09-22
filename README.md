@@ -14,7 +14,7 @@ around the Raspberry Pi RP235x family, W5500 Ethernet, and WS2812-compatible LED
 - DHCP/static network state and nonblocking link-recovery model.
 - Versioned, CRC-protected, two-slot persistent configuration abstraction.
 - SSD1306-gated OLED, nonblocking buzzer, debounced button, and status LED drivers.
-- Offline embedded dashboard for control, configuration, diagnostics, and OTA upload.
+- Offline embedded dashboard for control, configuration, diagnostics, and OTA upload, aligned to the `docs/ui/` design reference set.
 - SHA-256-validated, authenticated, staged, fail-closed OTA state machine.
 - Host test suite, sanitizer support, CI, and RP235x CMake build.
 
@@ -54,12 +54,11 @@ secure boot, OTA rollback, and power-failure recovery remain mandatory physical
 bring-up tests. The OTA path fails closed without board-provided staging,
 signature, and boot-control backends.
 
-The target includes a direct W5500 SPI/TCP HTTP server and uses the configured
-fallback address (`192.168.1.250`) while DHCP is selected. A wire-level DHCP lease
-client is not included in this hardware-unverified revision; the state remains
-`dhcp_wait` rather than falsely reporting a lease. Persistent configuration writes
-also fail closed until the custom-board flash regions are confirmed and a storage
-backend is installed.
+The target includes a direct W5500 SPI/TCP HTTP server and a WIZnet ioLibrary DHCP
+client for wire-level lease acquisition when DHCP mode is selected. Physical network
+validation is still required on the custom board for link, lease timing, renewals,
+and switch compatibility. Persistent configuration writes also fail closed until the
+custom-board flash regions are confirmed and a storage backend is installed.
 
 At the theoretical WS2812 worst case of 60 mA per pixel, 1,380 LEDs could require
 about 82.8 A at 5 V (414 W), excluding conversion and wiring losses. The default
@@ -76,5 +75,6 @@ Never commit signing private keys or production credentials.
 
 ## License
 
-No repository license has been selected. All rights are reserved. Pico SDK and
-toolchain dependencies retain their respective upstream licenses.
+No repository license has been selected. All rights are reserved. Pico SDK, the
+ARM toolchain, and the vendored WIZnet ioLibrary DHCP/W5500 sources under
+`third_party/wiznet/` retain their respective upstream licenses.

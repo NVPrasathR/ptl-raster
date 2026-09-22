@@ -16,6 +16,13 @@ static const char *const k_color_names[] = {
     "OFF"
 };
 
+static bool pharmacy_apply_assignment_set(pharmacy_protocol_context_t *ctx,
+                                         const char *channel_name,
+                                         const pharmacy_led_assignment_t *assignments,
+                                         size_t assignment_count,
+                                         const char *status_text,
+                                         pharmacy_response_t *response);
+
 static void pharmacy_response_reset(pharmacy_response_t *response) {
     if (response != NULL) {
         memset(response, 0, sizeof(*response));
@@ -334,6 +341,97 @@ static bool pharmacy_parse_legacy_leds_string(const char *value,
     return count > 0U;
 }
 
+static const char *pharmacy_find_json_object_end(const char *object_start) {
+    size_t depth = 0U;
+    bool in_string = false;
+    bool escaped = false;
+
+    if (object_start == NULL || *object_start != '{') {
+        return NULL;
+    }
+    for (const char *cursor = object_start; *cursor != '\0'; ++cursor) {
+        if (in_string) {
+            if (escaped) {
+                escaped = false;
+            } else if (*cursor == '\\') {
+                escaped = true;
+            } else if (*cursor == '"') {
+                in_string = false;
+            }
+            continue;
+        }
+        if (*cursor == '"') {
+            in_string = true;
+        } else if (*cursor == '{') {
+            ++depth;
+        } else if (*cursor == '}' && depth-- == 1U) {
+            return cursor;
+        }
+    }
+    return NULL;
+}
+
+int pharmacy_protocol_apply_server_data(pharmacy_protocol_context_t *ctx,
+                                        const char *json_body,
+                                        size_t body_len) {
+    static char object[PHARMACY_MAX_JSON_BODY];
+    static char channel_name[4];
+    static char status[8];
+    static pharmacy_led_assignment_t assignments[PHARMACY_MAX_LEDS_PER_CHANNEL];
+    static pharmacy_response_t response;
+    const char *cursor = NULL;
+    size_t applied = 0U;
+
+    if (ctx == NULL || json_body == NULL || body_len == 0U ||
+        body_len >= PHARMACY_MAX_JSON_BODY || json_body[0] != '[') {
+        return -1;
+    }
+
+    cursor = json_body;
+    while ((cursor = strstr(cursor, "\"channel\"")) != NULL) {
+        const char *object_start = cursor;
+        const char *object_end = NULL;
+        size_t object_length = 0U;
+        size_t assignment_count = 0U;
+
+        while (object_start > json_body && object_start[-1] != '{') {
+            --object_start;
+        }
+        if (*object_start != '{' ||
+            (object_end = pharmacy_find_json_object_end(object_start)) == NULL) {
+            return -1;
+        }
+        object_length = (size_t)(object_end - object_start) + 1U;
+        if (object_length >= sizeof(object)) {
+            return -1;
+        }
+        memcpy(object, object_start, object_length);
+        object[object_length] = '\0';
+
+        if (!pharmacy_parse_string_json_field(object, "channel", channel_name,
+                                              sizeof(channel_name)) ||
+            !pharmacy_parse_string_json_field(object, "status", status,
+                                              sizeof(status))) {
+            return -1;
+        }
+        if (strcmp(status, "on") == 0 &&
+            !pharmacy_parse_led_list_items(object, assignments,
+                                           PHARMACY_MAX_LEDS_PER_CHANNEL,
+                                           &assignment_count)) {
+            return -1;
+        }
+        pharmacy_response_reset(&response);
+        if (!pharmacy_apply_assignment_set(ctx, channel_name, assignments,
+                                           assignment_count, status, &response)) {
+            return -1;
+        }
+        ++applied;
+        cursor = object_end + 1U;
+    }
+
+    return applied > 0U ? 0 : -1;
+}
+
 static bool pharmacy_extract_legacy_leds(const char *json,
                                         pharmacy_led_assignment_t *assignments,
                                         size_t assignments_cap,
@@ -387,6 +485,22 @@ static void pharmacy_build_device_info(pharmacy_protocol_context_t *ctx) {
     ctx->device_info.uptime_seconds += 1U;
 }
 
+void pharmacy_protocol_sync_network(pharmacy_protocol_context_t *ctx,
+                                    const char *ip_address,
+                                    bool network_connected,
+                                    bool dhcp_enabled) {
+    if (ctx == NULL) {
+        return;
+    }
+    if (ip_address != NULL && ip_address[0] != '\0') {
+        snprintf(ctx->network_config.ip_address, sizeof(ctx->network_config.ip_address), "%s", ip_address);
+        snprintf(ctx->device_info.ip_address, sizeof(ctx->device_info.ip_address), "%s", ip_address);
+    }
+    ctx->network_config.dhcp_enabled = dhcp_enabled;
+    ctx->device_info.network_connected = network_connected;
+    ctx->device_info.ota_active = ctx->ota_active;
+}
+
 void pharmacy_protocol_init(pharmacy_protocol_context_t *ctx) {
     if (ctx == NULL) {
         return;
@@ -395,10 +509,10 @@ void pharmacy_protocol_init(pharmacy_protocol_context_t *ctx) {
     pharmacy_assign_default_channel_layout(ctx);
     ctx->network_config.dhcp_enabled = true;
     ctx->network_config.http_port = 80;
-    snprintf(ctx->network_config.ip_address, sizeof(ctx->network_config.ip_address), "%s", "192.168.1.10");
-    snprintf(ctx->network_config.subnet_mask, sizeof(ctx->network_config.subnet_mask), "%s", "255.255.255.0");
-    snprintf(ctx->network_config.gateway, sizeof(ctx->network_config.gateway), "%s", "192.168.1.1");
-    snprintf(ctx->network_config.dns_server, sizeof(ctx->network_config.dns_server), "%s", "1.1.1.1");
+    snprintf(ctx->network_config.ip_address, sizeof(ctx->network_config.ip_address), "%s", "172.17.0.102");
+    snprintf(ctx->network_config.subnet_mask, sizeof(ctx->network_config.subnet_mask), "%s", "255.255.252.0");
+    snprintf(ctx->network_config.gateway, sizeof(ctx->network_config.gateway), "%s", "172.17.3.254");
+    snprintf(ctx->network_config.dns_server, sizeof(ctx->network_config.dns_server), "%s", "172.17.3.254");
     snprintf(ctx->network_config.device_name, sizeof(ctx->network_config.device_name), "%s", "raster-pick-to-light");
     ctx->ota_active = false;
     pharmacy_build_device_info(ctx);
@@ -536,6 +650,113 @@ static bool pharmacy_apply_assignment_set(pharmacy_protocol_context_t *ctx,
     response->updated_leds = (int)assignment_count;
     snprintf(response->message, sizeof(response->message), "%s", "LED command applied");
     return true;
+}
+
+static size_t pharmacy_count_shelves(const char *json) {
+    static const char shelf_key[] = "\"shelf_phr_id\"";
+    const char *cursor = json;
+    size_t count = 0U;
+    while (cursor != NULL && (cursor = strstr(cursor, shelf_key)) != NULL) {
+        ++count;
+        cursor += sizeof(shelf_key) - 1U;
+    }
+    return count;
+}
+
+static const char *pharmacy_rgb_to_color_name(uint8_t red, uint8_t green, uint8_t blue) {
+    if (red == 255U && green == 255U && blue == 255U) return "WHITE";
+    if (red == 255U && green == 0U && blue == 255U) return "VIOLET";
+    if (red == 255U && green == 0U && blue == 0U) return "RED";
+    if (red == 0U && green == 255U && blue == 0U) return "GREEN";
+    if (red == 0U && green == 0U && blue == 255U) return "BLUE";
+    if (red == 255U && green == 255U && blue == 0U) return "YELLOW";
+    return "OFF";
+}
+
+static int pharmacy_apply_picklight_control(pharmacy_protocol_context_t *ctx,
+                                            const char *json_body,
+                                            pharmacy_response_t *response) {
+    pharmacy_led_assignment_t assignments[PHARMACY_MAX_LEDS_PER_CHANNEL];
+    char team_color[32];
+    char team_id[PHARMACY_MAX_TEAM_ID];
+    char status[8];
+    int location_id = 0;
+    size_t channel_index = 0U;
+    size_t shelf_count = 0U;
+    size_t assignment_count = 0U;
+
+    if (ctx == NULL || json_body == NULL || response == NULL ||
+        !pharmacy_parse_string_json_field(json_body, "teamcolor", team_color, sizeof(team_color)) ||
+        !pharmacy_parse_string_json_field(json_body, "team_id", team_id, sizeof(team_id)) ||
+        !pharmacy_parse_string_json_field(json_body, "status", status, sizeof(status)) ||
+        !pharmacy_parse_int_json_field(json_body, "location_id", &location_id) ||
+        !pharmacy_color_name_is_valid(team_color) || !pharmacy_protocol_is_valid_team_id(team_id) ||
+        (strcmp(status, "on") != 0 && strcmp(status, "off") != 0) ||
+        location_id < 1 || (size_t)location_id > ctx->channel_count) {
+        return -1;
+    }
+
+    channel_index = (size_t)(location_id - 1);
+    shelf_count = pharmacy_count_shelves(json_body);
+    if (shelf_count == 0U || shelf_count > (ctx->channels[channel_index].led_count + 5U) / 6U) {
+        return -1;
+    }
+
+    for (size_t shelf_index = 0U; shelf_index < shelf_count; ++shelf_index) {
+        for (size_t offset = 0U; offset < 6U; ++offset) {
+            size_t led_index = shelf_index * 6U + offset;
+            if (led_index >= ctx->channels[channel_index].led_count) break;
+            assignments[assignment_count].led_no = (uint16_t)(led_index + 1U);
+            assignments[assignment_count].on = strcmp(status, "on") == 0;
+            snprintf(assignments[assignment_count].team_id,
+                     sizeof(assignments[assignment_count].team_id), "%s", team_id);
+            pharmacy_color_to_rgb(team_color, &assignments[assignment_count].red,
+                                  &assignments[assignment_count].green,
+                                  &assignments[assignment_count].blue);
+            ++assignment_count;
+        }
+    }
+
+    return pharmacy_apply_assignment_set(ctx, ctx->channels[channel_index].channel, assignments,
+                                         assignment_count, status, response) ? 0 : -1;
+}
+
+static bool pharmacy_render_picklight_channel(const pharmacy_protocol_context_t *ctx,
+                                              size_t channel_index,
+                                              char *response,
+                                              size_t response_cap) {
+    const pharmacy_channel_state_t *channel = NULL;
+    size_t used = 0U;
+    int written = 0;
+
+    if (ctx == NULL || response == NULL || channel_index >= ctx->channel_count) return false;
+    channel = &ctx->channels[channel_index];
+    written = snprintf(response, response_cap, "[{\"channel\":\"%s\",\"status\":\"%s\",\"leds\":\"",
+                       channel->channel, channel->enabled ? "on" : "off");
+    if (written < 0 || (size_t)written >= response_cap) return false;
+    used = (size_t)written;
+    for (size_t led_index = 0U; led_index < channel->led_count; ++led_index) {
+        const pharmacy_led_assignment_t *led = &channel->leds[led_index];
+        written = snprintf(response + used, response_cap - used, "%zu:%s|", led_index + 1U,
+                           led->on ? pharmacy_rgb_to_color_name(led->red, led->green, led->blue) : "OFF");
+        if (written < 0 || (size_t)written >= response_cap - used) return false;
+        used += (size_t)written;
+    }
+    written = snprintf(response + used, response_cap - used, "\",\"led_list\":[");
+    if (written < 0 || (size_t)written >= response_cap - used) return false;
+    used += (size_t)written;
+    for (size_t led_index = 0U; led_index < channel->led_count; ++led_index) {
+        const pharmacy_led_assignment_t *led = &channel->leds[led_index];
+        written = snprintf(response + used, response_cap - used,
+                           "%s{\"led_no\":%zu,\"ledcolor\":\"%s\",\"team_id\":\"%s\"}",
+                           led_index == 0U ? "" : ",", led_index + 1U,
+                           led->on ? pharmacy_rgb_to_color_name(led->red, led->green, led->blue) : "OFF",
+                           led->team_id[0] == '\0' ? "0" : led->team_id);
+        if (written < 0 || (size_t)written >= response_cap - used) return false;
+        used += (size_t)written;
+    }
+    written = snprintf(response + used, response_cap - used, "]}]");
+    return written >= 0 && (size_t)written < response_cap - used;
 }
 
 int pharmacy_protocol_apply_led_control(pharmacy_protocol_context_t *ctx,
@@ -741,6 +962,33 @@ int pharmacy_protocol_handle_request(pharmacy_protocol_context_t *ctx,
                  "{\"success\":false,\"error\":{\"code\":\"%s\",\"message\":\"%s\"}}",
                  result.error_code,
                  result.error_message);
+        return 400;
+    }
+
+    if (strcmp(method, "POST") == 0 && strcmp(path, "/api/v1/picklight/ledcontrol") == 0) {
+        pharmacy_response_t result;
+        pharmacy_response_reset(&result);
+        if (pharmacy_apply_picklight_control(ctx, body, &result) == 0) {
+            snprintf(response, response_cap,
+                     "{\"success\":true,\"channel\":\"%s\",\"status\":\"%s\",\"updated_leds\":%d,\"message\":\"%s\"}",
+                     result.channel, result.status, result.updated_leds, result.message);
+            return 200;
+        }
+        snprintf(response, response_cap,
+                 "{\"success\":false,\"error\":{\"code\":\"INVALID_PICKLIGHT_REQUEST\",\"message\":\"location_id, teamcolor, team_id, status, and shelves are required\"}}");
+        return 400;
+    }
+
+    if (strcmp(method, "GET") == 0 &&
+        strncmp(path, "/api/v1/picklight/ledcontrol/", strlen("/api/v1/picklight/ledcontrol/")) == 0) {
+        size_t channel_index = 0U;
+        const char *channel_name = path + strlen("/api/v1/picklight/ledcontrol/");
+        if (pharmacy_channel_name_to_index(channel_name, &channel_index) &&
+            pharmacy_render_picklight_channel(ctx, channel_index, response, response_cap)) {
+            return 200;
+        }
+        snprintf(response, response_cap,
+                 "{\"success\":false,\"error\":{\"code\":\"INVALID_CHANNEL\",\"message\":\"Use C01 through C10\"}}");
         return 400;
     }
 

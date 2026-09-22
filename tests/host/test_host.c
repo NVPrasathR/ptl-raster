@@ -541,7 +541,7 @@ static void test_w5500_dhcp_static_and_recovery_state(void) {
     w5500_eth_init(&ctx, mac, true, NULL, NULL, NULL, NULL, "ptl", 8080);
     EXPECT_TRUE(ctx.initialized);
     EXPECT_TRUE(ctx.dhcp_enabled);
-    EXPECT_STREQ(ctx.ip, "192.168.1.10");
+    EXPECT_STREQ(ctx.ip, "172.17.0.102");
     EXPECT_EQ_I(ctx.http_port, 8080);
     EXPECT_STREQ(w5500_eth_state_name(&ctx), "init");
     w5500_eth_update(&ctx, 100u, false);
@@ -657,6 +657,46 @@ static void test_ota_digest_metadata_state_and_failures(void) {
     ota_session_reset(&session);
 }
 
+static void test_protocol_network_sync_uses_live_ip(void) {
+    pharmacy_protocol_context_t ctx;
+
+    pharmacy_protocol_init(&ctx);
+    EXPECT_STREQ(ctx.device_info.ip_address, "172.17.0.102");
+    EXPECT_TRUE(ctx.device_info.network_connected);
+
+    pharmacy_protocol_sync_network(&ctx, "172.17.0.102", true, true);
+    EXPECT_STREQ(ctx.device_info.ip_address, "172.17.0.102");
+    EXPECT_STREQ(ctx.network_config.ip_address, "172.17.0.102");
+    EXPECT_TRUE(ctx.device_info.network_connected);
+    EXPECT_TRUE(ctx.network_config.dhcp_enabled);
+
+    pharmacy_protocol_sync_network(&ctx, "10.0.0.20", false, false);
+    EXPECT_STREQ(ctx.device_info.ip_address, "10.0.0.20");
+    EXPECT_FALSE(ctx.device_info.network_connected);
+    EXPECT_FALSE(ctx.network_config.dhcp_enabled);
+}
+
+static void test_picklight_compatibility_routes(void) {
+    pharmacy_protocol_context_t ctx;
+    char response[PHARMACY_JSON_RESPONSE_CAPACITY];
+    const char *body =
+        "{\"teamcolor\":\"RED\",\"team_id\":\"1\",\"status\":\"on\","
+        "\"location_id\":4,\"shelves\":[{\"shelf_phr_id\":59,\"shelf_name\":\"A\"},"
+        "{\"shelf_phr_id\":60,\"shelf_name\":\"B\"}]}";
+
+    pharmacy_protocol_init(&ctx);
+    ctx.request_authorized = true;
+    EXPECT_EQ_I(pharmacy_protocol_handle_request(&ctx, "POST", "/api/v1/picklight/ledcontrol",
+                                                 body, strlen(body), response, sizeof(response)), 200);
+    EXPECT_CONTAINS(response, "\"channel\":\"C04\"");
+    EXPECT_CONTAINS(response, "\"updated_leds\":12");
+    EXPECT_EQ_I(pharmacy_protocol_handle_request(&ctx, "GET", "/api/v1/picklight/ledcontrol/C04",
+                                                 NULL, 0u, response, sizeof(response)), 200);
+    EXPECT_CONTAINS(response, "\"channel\":\"C04\"");
+    EXPECT_CONTAINS(response, "1:RED|2:RED|3:RED|4:RED|5:RED|6:RED|");
+    EXPECT_CONTAINS(response, "\"led_no\":12,\"ledcolor\":\"RED\",\"team_id\":\"1\"");
+}
+
 static void test_dashboard_assets_present(void) {
     EXPECT_TRUE(raster_dashboard_html_data != NULL);
     EXPECT_TRUE(raster_dashboard_html_size > 1024u);
@@ -674,6 +714,8 @@ int main(void) {
         {"HTTP parsing, routing, status, bounds", test_http_parsing_routing_status_and_bounds},
         {"configuration validation, two-slot persistence, CRC, recovery", test_config_validation_two_slot_crc_and_failure_recovery},
         {"W5500 DHCP, static, recovery state", test_w5500_dhcp_static_and_recovery_state},
+        {"protocol network sync uses live IP", test_protocol_network_sync_uses_live_ip},
+        {"external pick-light compatibility routes", test_picklight_compatibility_routes},
         {"OTA digest, metadata, state, auth, failure paths", test_ota_digest_metadata_state_and_failures},
         {"dashboard assets present", test_dashboard_assets_present},
     };

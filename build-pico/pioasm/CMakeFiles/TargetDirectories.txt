@@ -1,0 +1,7 @@
+/Users/narayanavishnuprasathr/copilot-worktrees/ptl-raster/nvprasathr-symmetrical-bassoon/build-pico/pioasm/CMakeFiles/pioasm.dir
+/Users/narayanavishnuprasathr/copilot-worktrees/ptl-raster/nvprasathr-symmetrical-bassoon/build-pico/pioasm/CMakeFiles/edit_cache.dir
+/Users/narayanavishnuprasathr/copilot-worktrees/ptl-raster/nvprasathr-symmetrical-bassoon/build-pico/pioasm/CMakeFiles/rebuild_cache.dir
+/Users/narayanavishnuprasathr/copilot-worktrees/ptl-raster/nvprasathr-symmetrical-bassoon/build-pico/pioasm/CMakeFiles/list_install_components.dir
+/Users/narayanavishnuprasathr/copilot-worktrees/ptl-raster/nvprasathr-symmetrical-bassoon/build-pico/pioasm/CMakeFiles/install.dir
+/Users/narayanavishnuprasathr/copilot-worktrees/ptl-raster/nvprasathr-symmetrical-bassoon/build-pico/pioasm/CMakeFiles/install/local.dir
+/Users/narayanavishnuprasathr/copilot-worktrees/ptl-raster/nvprasathr-symmetrical-bassoon/build-pico/pioasm/CMakeFiles/install/strip.dir
