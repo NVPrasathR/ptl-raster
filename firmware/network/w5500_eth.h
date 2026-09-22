@@ -67,10 +67,15 @@ const char *w5500_eth_state_name(w5500_eth_context_t *ctx);
 typedef int (*w5500_http_handler_fn)(const char *request, size_t request_length,
                                      char *response, size_t response_capacity,
                                      void *context);
+typedef int (*w5500_data_handler_fn)(const char *data, size_t data_length,
+                                      void *context);
 bool w5500_hw_init(w5500_eth_context_t *ctx);
 bool w5500_hw_link_up(void);
 void w5500_http_service(w5500_eth_context_t *ctx, w5500_http_handler_fn handler,
                         void *handler_context);
+void w5500_data_server_service(w5500_eth_context_t *ctx,
+                               w5500_data_handler_fn handler,
+                               void *handler_context);
 #endif
 
 #ifdef __cplusplus

@@ -10,6 +10,8 @@ partially change channel state. Omitted LEDs retain their prior state.
 | GET | `/api/v1/channels` | Summaries for all channels |
 | GET | `/api/v1/channels/C01` | One channel |
 | POST | `/api/v1/led/control` | Apply validated pharmacy command |
+| POST | `/api/v1/picklight/ledcontrol` | Apply an external location and shelf command |
+| GET | `/api/v1/picklight/ledcontrol/C01` | Return one channel in external `leds` and `led_list` form |
 | POST | `/api/v1/channels/C01/off` | Disable one channel |
 | POST | `/api/v1/channels/all/off` | Disable all channels |
 | GET/PUT | `/api/v1/config` | Read/update nonsecret settings |
@@ -38,3 +40,11 @@ present they must agree; they are never silently merged.
 Administrative configuration and OTA routes require an authentication layer in
 the final W5500 transport integration. HTTP provides no confidentiality; deploy
 only on a trusted, segmented network unless a tested TLS gateway is used.
+
+## External Pick-Light Compatibility
+
+`POST /api/v1/picklight/ledcontrol` accepts `teamcolor`, `team_id`, `status`,
+`location_id`, and `shelves`. `location_id` maps to its channel (`1` maps to
+`C01`); each supplied shelf maps in array order to six LEDs. `GET
+/api/v1/picklight/ledcontrol/C01` returns an array containing that channel's
+`status`, compact `leds` string, and `led_list`.

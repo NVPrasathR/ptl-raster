@@ -13,7 +13,7 @@ extern "C" {
 #define PHARMACY_MAX_LEDS_PER_CHANNEL 192U
 #define PHARMACY_MAX_TEAM_ID 32U
 #define PHARMACY_MAX_JSON_BODY 4096U
-#define PHARMACY_JSON_RESPONSE_CAPACITY 2048U
+#define PHARMACY_JSON_RESPONSE_CAPACITY 12288U
 
 typedef struct {
     uint16_t led_no;
@@ -88,6 +88,7 @@ typedef struct pharmacy_protocol_context_t {
     pharmacy_channel_config_fn channel_config;
     void *channel_config_context;
     bool request_authorized;
+    bool allow_unprovisioned_led_control;
 } pharmacy_protocol_context_t;
 
 void pharmacy_protocol_init(pharmacy_protocol_context_t *ctx);
@@ -101,6 +102,11 @@ void pharmacy_protocol_set_committers(pharmacy_protocol_context_t *ctx,
                                       void *config_commit_context,
                                       pharmacy_channel_config_fn channel_config,
                                       void *channel_config_context);
+void pharmacy_protocol_sync_network(pharmacy_protocol_context_t *ctx,
+                                    const char *ip_address,
+                                    bool network_connected,
+                                    bool dhcp_enabled);
+
 int pharmacy_protocol_handle_request(pharmacy_protocol_context_t *ctx,
                                     const char *method,
                                     const char *path,
@@ -113,6 +119,10 @@ int pharmacy_protocol_apply_led_control(pharmacy_protocol_context_t *ctx,
                                        const char *json_body,
                                        size_t body_len,
                                        pharmacy_response_t *response);
+
+int pharmacy_protocol_apply_server_data(pharmacy_protocol_context_t *ctx,
+                                        const char *json_body,
+                                        size_t body_len);
 
 bool pharmacy_protocol_parse_channel_name(const char *text, size_t *index_out);
 bool pharmacy_protocol_is_valid_team_id(const char *team_id);

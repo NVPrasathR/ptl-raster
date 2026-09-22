@@ -22,7 +22,7 @@ cooperative 10 ms service loop.
 - `network/`: bounded HTTP routing and nonblocking W5500 network state.
 - `configuration/`: validated persistent model and transactional storage abstraction.
 - `ota/`: SHA-256 validation and fail-closed update state machine.
-- `web/`: deterministic embedded offline dashboard asset.
+- `web/`: deterministic embedded offline dashboard asset aligned to `docs/ui/`.
 
 The integrated target uses about 141 KiB BSS
 including HTTP request/response buffers. Maximum channel length is 192 LEDs;
@@ -31,8 +31,8 @@ six. No unbounded heap allocation is used in the application modules.
 
 ## Hardware boundary
 
-The RP235x SDK target, PIO program, W5500 SPI/TCP server, and application compile
-for the assumed B package. W5500 DHCP lease exchange, nonvolatile flash placement, production
-signature verification, bootloader slot switching, SSD1306 identity/address, and
-electrical characteristics require the custom board and cannot be accepted by
-software compilation alone.
+The RP235x SDK target, PIO program, W5500 SPI/TCP server, WIZnet DHCP client, and
+application compile for the assumed B package. Nonvolatile flash placement, production
+signature verification, bootloader slot switching, SSD1306 identity/address, DHCP
+behavior on the assembled network, and electrical characteristics still require the
+custom board and cannot be accepted by software compilation alone.

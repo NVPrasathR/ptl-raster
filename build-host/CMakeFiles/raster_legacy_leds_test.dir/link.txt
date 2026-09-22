@@ -1,0 +1,1 @@
+/usr/bin/cc  -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/raster_legacy_leds_test.dir/test_legacy_leds.c.o -o raster_legacy_leds_test  libraster_firmware_host.a

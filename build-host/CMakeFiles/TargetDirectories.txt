@@ -1,0 +1,7 @@
+/Users/narayanavishnuprasathr/copilot-worktrees/ptl-raster/nvprasathr-symmetrical-bassoon/build-host/CMakeFiles/raster_firmware_host.dir
+/Users/narayanavishnuprasathr/copilot-worktrees/ptl-raster/nvprasathr-symmetrical-bassoon/build-host/CMakeFiles/raster_host_unit_tests.dir
+/Users/narayanavishnuprasathr/copilot-worktrees/ptl-raster/nvprasathr-symmetrical-bassoon/build-host/CMakeFiles/raster_dashboard_endpoint_test.dir
+/Users/narayanavishnuprasathr/copilot-worktrees/ptl-raster/nvprasathr-symmetrical-bassoon/build-host/CMakeFiles/raster_legacy_leds_test.dir
+/Users/narayanavishnuprasathr/copilot-worktrees/ptl-raster/nvprasathr-symmetrical-bassoon/build-host/CMakeFiles/test.dir
+/Users/narayanavishnuprasathr/copilot-worktrees/ptl-raster/nvprasathr-symmetrical-bassoon/build-host/CMakeFiles/edit_cache.dir
+/Users/narayanavishnuprasathr/copilot-worktrees/ptl-raster/nvprasathr-symmetrical-bassoon/build-host/CMakeFiles/rebuild_cache.dir

@@ -1,0 +1,5 @@
+/Users/narayanavishnuprasathr/copilot-worktrees/ptl-raster/nvprasathr-symmetrical-bassoon/build-pico/pioasm-install/pioasm/pioasm
+/Users/narayanavishnuprasathr/copilot-worktrees/ptl-raster/nvprasathr-symmetrical-bassoon/build-pico/pioasm-install/pioasm/pioasmTargets.cmake
+/Users/narayanavishnuprasathr/copilot-worktrees/ptl-raster/nvprasathr-symmetrical-bassoon/build-pico/pioasm-install/pioasm/pioasmTargets-release.cmake
+/Users/narayanavishnuprasathr/copilot-worktrees/ptl-raster/nvprasathr-symmetrical-bassoon/build-pico/pioasm-install/pioasm/pioasmConfig.cmake
+/Users/narayanavishnuprasathr/copilot-worktrees/ptl-raster/nvprasathr-symmetrical-bassoon/build-pico/pioasm-install/pioasm/pioasmConfigVersion.cmake

@@ -1,0 +1,1 @@
+/usr/bin/cc  -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/raster_host_unit_tests.dir/test_host.c.o -o raster_host_unit_tests  libraster_firmware_host.a

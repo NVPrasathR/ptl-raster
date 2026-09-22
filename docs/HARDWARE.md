@@ -22,11 +22,16 @@ The product brief references `RP2354B`, but the Pico SDK naming is still `rp2350
 - 30 GPIO vs 48 GPIO package distinction
 - GPIO 30/31/32 valid on the 48 GPIO B package
 - B-package assumption used in `cmake/raster_custom.h`
+- The firmware now includes an SH1106G-compatible 128x64 I2C OLED manager on
+  GPIO20 (SDA), GPIO21 (SCL), address `0x3c`, and 400 kHz I2C. The controller
+  address, display variant, pull-ups, and electrical levels still require
+  confirmation on the assembled board.
 
 ## What is intentionally not asserted here
 - Board-specific flash type or density
 - Electrical and schematic correctness of the product-specified map in `firmware/board_pins.h`
 - Final Ethernet, OLED, buzzer, and LED-chain wiring assignments
+- Measured DHCP lease and renewal behavior on the final switch/router topology
 
 ## Power and signal integrity
 
@@ -41,3 +46,9 @@ order from the purchased component datasheet.
 - Raspberry Pi Pico SDK local headers (above)
 - https://datasheets.raspberrypi.com/rp2350/rp2350-datasheet.pdf
 - https://datasheets.raspberrypi.com/rp2354/rp2354b-datasheet.pdf
+
+## W5500 DHCP software evidence
+The firmware now vendors the minimal WIZnet ioLibrary W5500/DHCP sources under
+`third_party/wiznet/` and uses them on-device for hardware DHCP negotiation. This
+proves build-time integration of a real DHCP client, but not successful leasing on the
+final custom hardware without physical network testing.

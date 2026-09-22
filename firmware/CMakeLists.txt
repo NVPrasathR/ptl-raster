@@ -9,10 +9,16 @@ add_executable(raster_pick_to_light
     drivers/button.c
     drivers/buzzer.c
     drivers/oled.c
+    drivers/sh1106g.c
+    drivers/oled_manager.c
     drivers/status_led.c
     drivers/ws2812.c
     network/http_server.c
     network/w5500_eth.c
+    ../third_party/wiznet/Ethernet/wizchip_conf.c
+    ../third_party/wiznet/Ethernet/socket.c
+    ../third_party/wiznet/Ethernet/W5500/w5500.c
+    ../third_party/wiznet/Internet/DHCP/dhcp.c
     ota/ota_state.c
     ota/ota_verify.c
     system/raster_runtime.c
@@ -29,6 +35,9 @@ target_include_directories(raster_pick_to_light
         ${CMAKE_CURRENT_LIST_DIR}/ota
         ${CMAKE_CURRENT_LIST_DIR}/system
         ${CMAKE_CURRENT_LIST_DIR}/web
+        ${CMAKE_CURRENT_LIST_DIR}/../third_party/wiznet/Ethernet
+        ${CMAKE_CURRENT_LIST_DIR}/../third_party/wiznet/Ethernet/W5500
+        ${CMAKE_CURRENT_LIST_DIR}/../third_party/wiznet/Internet/DHCP
 )
 
 target_compile_features(raster_pick_to_light PRIVATE c_std_11)
@@ -37,6 +46,15 @@ target_compile_definitions(raster_pick_to_light PRIVATE
     PICO_BUILD=1
     RASTER_ENABLE_WS2812_CHAIN=1
     RASTER_ENABLE_ETHERNET=1
+    _WIZCHIP_=W5500
+)
+
+set_source_files_properties(
+    ${CMAKE_CURRENT_LIST_DIR}/../third_party/wiznet/Ethernet/wizchip_conf.c
+    ${CMAKE_CURRENT_LIST_DIR}/../third_party/wiznet/Ethernet/socket.c
+    ${CMAKE_CURRENT_LIST_DIR}/../third_party/wiznet/Ethernet/W5500/w5500.c
+    ${CMAKE_CURRENT_LIST_DIR}/../third_party/wiznet/Internet/DHCP/dhcp.c
+    PROPERTIES COMPILE_OPTIONS "-w"
 )
 
 pico_generate_pio_header(raster_pick_to_light
