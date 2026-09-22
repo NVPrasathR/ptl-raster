@@ -67,7 +67,7 @@ ptl_result_t oled_manager_init(void) {
         .i2c_instance = 0u, .i2c_address = OLED_ADDRESS,
         .sda_gpio = RASTER_OLED_SDA_PIN, .scl_gpio = RASTER_OLED_SCL_PIN,
         .i2c_frequency_hz = OLED_I2C_HZ, .width = OLED_WIDTH, .height = OLED_HEIGHT,
-        .column_offset = 2u, .orientation = 0u
+        .column_offset = 2u, .orientation = 180u
     };
     initialized = false;
     message = OLED_MESSAGE_NONE;

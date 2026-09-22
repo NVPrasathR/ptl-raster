@@ -22,6 +22,16 @@ static bool write_command(uint8_t command) {
     return i2c_write_blocking(bus(), config.i2c_address, packet, sizeof(packet), false) == 2;
 }
 
+static void apply_orientation(void) {
+    if (config.orientation == 180u) {
+        (void)write_command(0xA1u);
+        (void)write_command(0xC8u);
+    } else {
+        (void)write_command(0xA0u);
+        (void)write_command(0xC0u);
+    }
+}
+
 static void set_pixel(uint8_t x, uint8_t y) {
     if (x < config.width && y < config.height) {
         framebuffer[x + ((uint16_t)y / 8u) * config.width] |=
@@ -75,7 +85,11 @@ ptl_result_t sh1106g_init(const sh1106g_config_t *requested) {
                   write_command(0x80u) && write_command(0xa8u) &&
                   write_command(0x3fu) && write_command(0xadu) &&
                   write_command(0x8bu) && write_command(0x20u) &&
-                  write_command(0x02u) && write_command(0xafu);
+                  write_command(0x02u);
+    if (initialized) {
+        apply_orientation();
+        initialized = write_command(0xafu);
+    }
     memset(framebuffer, 0, sizeof(framebuffer));
     return initialized ? PTL_RESULT_OK : PTL_RESULT_IO_ERROR;
 }
